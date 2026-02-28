@@ -1,3 +1,4 @@
+#  source .venv/bin/activate
 import requests
 from pathlib import Path
 from typing import Dict
