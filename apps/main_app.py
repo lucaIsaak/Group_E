@@ -1,75 +1,220 @@
+"""
+apps/main_app.py
+"""
+
+from __future__ import annotations
+
 import sys
 from pathlib import Path
+from typing import Dict, Optional
 
-# Add the project root to the sys.path
-root_path = Path(__file__).resolve().parent.parent
-sys.path.append(str(root_path))
-
-from main import OkavangoData # Now this will work
-import streamlit as st
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
+import streamlit as st
+from matplotlib.ticker import FuncFormatter
+
+ROOT_PATH = Path(__file__).resolve().parent.parent
+sys.path.append(str(ROOT_PATH))
+
+from main import OkavangoData  # noqa: E402
 
 
-# Datasets as defined in project instructions
-DATASET_CONFIG = {
-    "annual_change_forest_area.csv": "https://ourworldindata.org/grapher/annual-change-forest-area.csv?v=1&csvType=full&useColumnShortNames=true",
-    "annual_deforestation.csv": "https://ourworldindata.org/grapher/annual-deforestation.csv?v=1&csvType=full&useColumnShortNames=true",
-    "protected_land.csv": "https://ourworldindata.org/grapher/terrestrial-protected-areas.csv?v=1&csvType=full&useColumnShortNames=true",
-    "degraded_land.csv": "https://ourworldindata.org/grapher/share-degraded-land.csv?v=1&csvType=full&useColumnShortNames=true",
-    "red_list_index.csv": "https://ourworldindata.org/grapher/red-list-index.csv?v=1&csvType=full&useColumnShortNames=true",
-    "ne_110m_admin_0_countries.zip": "https://naciscdn.org/naturalearth/110m/cultural/ne_110m_admin_0_countries.zip"
-}
+def build_dataset_config() -> Dict[str, str]:
+    base_params = "csvType=full&useColumnShortNames=true"
+
+    return {
+        "annual_change_forest_area.csv": (
+            "https://ourworldindata.org/grapher/annual-change-forest-area.csv?"
+            f"{base_params}"
+        ),
+        "annual_deforestation.csv": (
+            "https://ourworldindata.org/grapher/annual-deforestation.csv?"
+            f"{base_params}"
+        ),
+        "protected_land.csv": (
+            "https://ourworldindata.org/grapher/terrestrial-protected-areas.csv?"
+            f"{base_params}"
+        ),
+        "degraded_land.csv": (
+            "https://ourworldindata.org/grapher/share-degraded-land.csv?"
+            f"{base_params}"
+        ),
+        "red_list_index.csv": (
+            "https://ourworldindata.org/grapher/red-list-index.csv?"
+            f"{base_params}"
+        ),
+        "ne_110m_admin_0_countries.zip": (
+            "https://naciscdn.org/naturalearth/110m/cultural/"
+            "ne_110m_admin_0_countries.zip"
+        ),
+    }
+
 
 @st.cache_resource
-def get_processed_data():
-    """Initialize the OkavangoData class once and cache the result."""
-    return OkavangoData(DATASET_CONFIG)
-# Load the data using the Class from main.py
-okavango = get_processed_data()
-gdf = okavango.get_data()
+def get_processed_data(dataset_config: Dict[str, str]) -> OkavangoData:
+    return OkavangoData(dataset_config)
 
-st.title("🌍 Project Okavango: Environmental Data Tool")
 
-# 1. Map Selection Logic
-# Extracting the numerical columns added during the merge
-display_columns = [col for col in gdf.columns if col not in gdf.geometry.name and col not in ['admin', 'code', 'year']]
-selected_metric = st.selectbox("Select a map to plot:", display_columns)
+def find_country_column(columns: list[str]) -> Optional[str]:
+    candidates = (
+        "ADMIN",
+        "admin",
+        "NAME",
+        "name",
+    )
+    for col in candidates:
+        if col in columns:
+            return col
+    return None
 
-# 2. Plotting the World Map
-st.subheader(f"Global Distribution: {selected_metric}")
-fig_map, ax_map = plt.subplots(1, 1, figsize=(15, 8))
-gdf.plot(
-    column=selected_metric, 
-    ax=ax_map, 
-    legend=True, 
-    cmap='viridis', 
-    missing_kwds={'color': 'lightgrey'}
-)
-ax_map.set_axis_off()
-st.pyplot(fig_map)
 
-# 3. Top 5 / Bottom 5 Analysis
-st.divider()
-st.subheader(f"Top 5 and Bottom 5 Countries: {selected_metric}")
+def get_latest_year(df: pd.DataFrame) -> Optional[int]:
+    if "year" not in df.columns:
+        return None
 
-# Prepare the data for charting
-chart_data = gdf[['admin', selected_metric]].dropna().sort_values(by=selected_metric, ascending=False)
+    years = pd.to_numeric(df["year"], errors="coerce").dropna()
+    if years.empty:
+        return None
 
-if not chart_data.empty:
-    top_5 = chart_data.head(5)
-    bottom_5 = chart_data.tail(5)
-    combined_data = pd.concat([top_5, bottom_5])
+    return int(years.max())
 
-    fig_chart, ax_chart = plt.subplots(figsize=(10, 6))
-    
-    # Visual distinction between top and bottom
-    colors = ['#2ecc71'] * 5 + ['#e74c3c'] * 5 
-    
-    ax_chart.barh(combined_data['admin'], combined_data[selected_metric], color=colors)
-    ax_chart.set_xlabel("Value")
-    ax_chart.invert_yaxis()  # Best values on top
-    
-    st.pyplot(fig_chart)
-else:
-    st.warning("No data available to generate charts for this selection.")
+
+def main() -> None:
+    st.set_page_config(page_title="Project Okavango", layout="wide")
+    st.title("🌍 Project Okavango: Environmental Data Tool")
+
+    dataset_config = build_dataset_config()
+
+    with st.spinner("Loading and processing datasets..."):
+        okavango = get_processed_data(dataset_config)
+        gdf = okavango.get_data()
+
+    country_col = find_country_column(list(gdf.columns))
+    if country_col is None:
+        st.error("Country column not found.")
+        st.stop()
+
+    dataset_to_metric: Dict[str, str] = {
+        "Annual change in forest area": "net_change_forest_area",
+        "Annual deforestation": "_1d_deforestation",
+        "Share of land that is protected": "er_lnd_ptld_zs",
+        "Share of land that is degraded": "_15_3_1__ag_lnd_dgrd",
+        "Red List Index (5th dataset)": "_15_5_1__er_rsk_lst",
+    }
+
+    dataset_name = st.selectbox(
+        "Select dataset (one map at a time):",
+        list(dataset_to_metric.keys()),
+    )
+
+    metric_col = dataset_to_metric[dataset_name]
+
+    latest_year = get_latest_year(gdf)
+
+    if latest_year is not None:
+        gdf_plot = gdf[
+            pd.to_numeric(gdf["year"], errors="coerce") == latest_year
+        ].copy()
+        st.caption(f"Using most recent year: {latest_year}")
+    else:
+        gdf_plot = gdf.copy()
+
+    # ---------- MAP ----------
+    st.subheader(f"World Map: {dataset_name}")
+
+    fig_map, ax_map = plt.subplots(figsize=(15, 8))
+    gdf_plot.plot(
+        column=metric_col,
+        ax=ax_map,
+        legend=True,
+        missing_kwds={"color": "lightgrey"},
+    )
+    ax_map.set_axis_off()
+    st.pyplot(fig_map, clear_figure=True)
+
+    # ---------- TOP/BOTTOM ----------
+    st.divider()
+    st.subheader(f"Top 5 vs Bottom 5 Countries: {dataset_name}")
+
+    chart_data = (
+        gdf_plot[[country_col, metric_col]]
+        .dropna()
+        .astype({metric_col: float})
+    )
+
+    if chart_data.empty:
+        st.warning("No data available.")
+        st.stop()
+
+    chart_desc = chart_data.sort_values(by=metric_col, ascending=False)
+    top_5 = chart_desc.head(5)
+    bottom_5 = chart_data.sort_values(by=metric_col, ascending=True).head(5)
+
+    left_col, right_col = st.columns(2)
+
+    # Detect formatting style
+    is_index_dataset = "Index" in dataset_name
+    is_percentage = "Share" in dataset_name
+
+    def format_value(v: float) -> str:
+        if is_index_dataset:
+            return f"{v:.3f}"
+        if is_percentage:
+            return f"{v:.2f}%"
+        return f"{v:,.0f}"
+
+    def apply_axis_format(ax):
+        if not is_index_dataset and not is_percentage:
+            ax.xaxis.set_major_formatter(
+                FuncFormatter(lambda x, _: f"{x:,.0f}")
+            )
+
+    # ---- TOP ----
+    with left_col:
+        st.markdown("### ✅ Top 5")
+        fig_top, ax_top = plt.subplots(figsize=(7, 4))
+        ax_top.barh(
+            top_5[country_col].astype(str),
+            top_5[metric_col],
+            color="green",
+        )
+        ax_top.invert_yaxis()
+
+        apply_axis_format(ax_top)
+
+        for i, value in enumerate(top_5[metric_col].tolist()):
+            ax_top.text(value, i, f" {format_value(value)}", va="center")
+
+        if is_index_dataset:
+            min_val = chart_data[metric_col].min()
+            max_val = chart_data[metric_col].max()
+            ax_top.set_xlim(min_val * 0.999, max_val * 1.001)
+
+        st.pyplot(fig_top, clear_figure=True)
+
+    # ---- BOTTOM ----
+    with right_col:
+        st.markdown("### ❌ Bottom 5")
+        fig_bottom, ax_bottom = plt.subplots(figsize=(7, 4))
+        ax_bottom.barh(
+            bottom_5[country_col].astype(str),
+            bottom_5[metric_col],
+            color="red",
+        )
+        ax_bottom.invert_yaxis()
+
+        apply_axis_format(ax_bottom)
+
+        for i, value in enumerate(bottom_5[metric_col].tolist()):
+            ax_bottom.text(value, i, f" {format_value(value)}", va="center")
+
+        if is_index_dataset:
+            min_val = chart_data[metric_col].min()
+            max_val = chart_data[metric_col].max()
+            ax_bottom.set_xlim(min_val * 0.999, max_val * 1.001)
+
+        st.pyplot(fig_bottom, clear_figure=True)
+
+
+if __name__ == "__main__":
+    main()
