@@ -1,5 +1,6 @@
 """
 apps/main_app.py
+Frontend Streamlit dashboard for Project Okavango.
 """
 
 from __future__ import annotations
@@ -9,7 +10,6 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import matplotlib.pyplot as plt
-import pandas as pd
 import streamlit as st
 from matplotlib.ticker import FuncFormatter
 
@@ -17,10 +17,12 @@ from matplotlib.ticker import FuncFormatter
 ROOT_PATH = Path(__file__).resolve().parent.parent
 sys.path.append(str(ROOT_PATH))
 
-from main import OkavangoData  # noqa: E402
+# Tell Pylint to ignore the dynamic import
+from main import OkavangoData  # pylint: disable=import-error, wrong-import-position
 
 
 def build_dataset_config() -> Dict[str, str]:
+    """Builds and returns the dictionary of dataset URLs."""
     base_params = "csvType=full&useColumnShortNames=true"
 
     return {
@@ -54,10 +56,12 @@ def build_dataset_config() -> Dict[str, str]:
 # Cache the initialization so the class doesn't re-download data on every click!
 @st.cache_resource
 def get_processed_data(dataset_config: Dict[str, str]) -> OkavangoData:
+    """Initializes and caches the OkavangoData class."""
     return OkavangoData(dataset_config)
 
 
 def find_country_column(columns: list[str]) -> Optional[str]:
+    """Finds the column name representing countries in the dataframe."""
     candidates = ("ADMIN", "admin", "NAME", "name")
     for col in candidates:
         if col in columns:
@@ -66,6 +70,10 @@ def find_country_column(columns: list[str]) -> Optional[str]:
 
 
 def main() -> None:
+    """Main Streamlit application layout and logic."""
+    # Tell Pylint it's okay for a Streamlit app to have a lot of variables
+    # pylint: disable=too-many-locals, too-many-statements
+
     st.set_page_config(page_title="Project Okavango", layout="wide")
     st.title("🌍 Project Okavango: Environmental Data Tool")
 
@@ -105,10 +113,13 @@ def main() -> None:
     st.subheader(f"World Map: {dataset_name}")
 
     fig_map, ax_map = plt.subplots(figsize=(15, 8))
-    
+
     # Check if the metric actually exists in the dataframe before plotting
     if metric_col not in gdf_plot.columns:
-        st.error(f"Could not find data column '{metric_col}' in the merged dataset. Check your CSV column names!")
+        st.error(
+            f"Could not find data column '{metric_col}' in the merged dataset."
+            "Check your CSV column names!"
+        )
         st.stop()
 
     gdf_plot.plot(
