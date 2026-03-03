@@ -1,8 +1,5 @@
 """
 apps/main_app.py
-
-Streamlit application for Project Okavango. Displays interactive maps and 
-statistical charts based on environmental data.
 """
 
 from __future__ import annotations
@@ -16,7 +13,7 @@ import pandas as pd
 import streamlit as st
 from matplotlib.ticker import FuncFormatter
 
-# Add project root to path so we can import from main.py
+# Ensure the apps folder can see the main.py file in the root directory
 ROOT_PATH = Path(__file__).resolve().parent.parent
 sys.path.append(str(ROOT_PATH))
 
@@ -24,29 +21,28 @@ from main import OkavangoData  # noqa: E402
 
 
 def build_dataset_config() -> Dict[str, str]:
-    """
-    Builds the configuration dictionary containing URLs for the datasets.
-
-    Returns:
-        Dict[str, str]: A dictionary mapping filenames to their download URLs.
-    """
     base_params = "csvType=full&useColumnShortNames=true"
 
     return {
         "annual_change_forest_area.csv": (
-            f"https://ourworldindata.org/grapher/annual-change-forest-area.csv?{base_params}"
+            "https://ourworldindata.org/grapher/annual-change-forest-area.csv?"
+            f"{base_params}"
         ),
         "annual_deforestation.csv": (
-            f"https://ourworldindata.org/grapher/annual-deforestation.csv?{base_params}"
+            "https://ourworldindata.org/grapher/annual-deforestation.csv?"
+            f"{base_params}"
         ),
         "protected_land.csv": (
-            f"https://ourworldindata.org/grapher/terrestrial-protected-areas.csv?{base_params}"
+            "https://ourworldindata.org/grapher/terrestrial-protected-areas.csv?"
+            f"{base_params}"
         ),
         "degraded_land.csv": (
-            f"https://ourworldindata.org/grapher/share-degraded-land.csv?{base_params}"
+            "https://ourworldindata.org/grapher/share-degraded-land.csv?"
+            f"{base_params}"
         ),
         "red_list_index.csv": (
-            f"https://ourworldindata.org/grapher/red-list-index.csv?{base_params}"
+            "https://ourworldindata.org/grapher/red-list-index.csv?"
+            f"{base_params}"
         ),
         "ne_110m_admin_0_countries.zip": (
             "https://naciscdn.org/naturalearth/110m/cultural/"
@@ -55,32 +51,13 @@ def build_dataset_config() -> Dict[str, str]:
     }
 
 
+# Cache the initialization so the class doesn't re-download data on every click!
 @st.cache_resource
-def get_processed_data(_dataset_config: Dict[str, str]) -> OkavangoData:
-    """
-    Initializes the OkavangoData class, caching the result to prevent 
-    re-downloading and re-merging on every Streamlit interaction.
-
-    Args:
-        _dataset_config (Dict[str, str]): Dictionary of dataset URLs. 
-            (Prefixed with '_' to tell Streamlit not to hash it for caching).
-
-    Returns:
-        OkavangoData: The instantiated data processing class.
-    """
-    return OkavangoData(_dataset_config)
+def get_processed_data(dataset_config: Dict[str, str]) -> OkavangoData:
+    return OkavangoData(dataset_config)
 
 
 def find_country_column(columns: list[str]) -> Optional[str]:
-    """
-    Identifies the column name containing country names in the dataset.
-
-    Args:
-        columns (list[str]): List of column names from the GeoDataFrame.
-
-    Returns:
-        Optional[str]: The name of the country column if found, else None.
-    """
     candidates = ("ADMIN", "admin", "NAME", "name")
     for col in candidates:
         if col in columns:
@@ -89,19 +66,19 @@ def find_country_column(columns: list[str]) -> Optional[str]:
 
 
 def main() -> None:
-    """Main execution function for the Streamlit app."""
     st.set_page_config(page_title="Project Okavango", layout="wide")
     st.title("🌍 Project Okavango: Environmental Data Tool")
 
     dataset_config = build_dataset_config()
 
-    with st.spinner("Loading and processing datasets (Fetching most recent data)..."):
+    with st.spinner("Loading and processing datasets..."):
+        # This triggers your class __init__, downloading and merging everything
         okavango = get_processed_data(dataset_config)
         gdf = okavango.get_data()
 
     country_col = find_country_column(list(gdf.columns))
     if country_col is None:
-        st.error("Country column not found in the geographic data.")
+        st.error("Country column not found in the merged map.")
         st.stop()
 
     dataset_to_metric: Dict[str, str] = {
@@ -119,20 +96,26 @@ def main() -> None:
 
     metric_col = dataset_to_metric[dataset_name]
 
-    # Note: gdf is already filtered to the most recent available year per country 
-    # via the OkavangoData class logic.
+    # Because OkavangoData already handles the most recent year logic,
+    # we can use the dataframe exactly as it comes out of the class!
     gdf_plot = gdf.copy()
+    st.caption("Displaying the most recent available data per country.")
 
     # ---------- MAP ----------
     st.subheader(f"World Map: {dataset_name}")
-    st.caption("Displaying the most recent available data for each country.")
 
     fig_map, ax_map = plt.subplots(figsize=(15, 8))
+    
+    # Check if the metric actually exists in the dataframe before plotting
+    if metric_col not in gdf_plot.columns:
+        st.error(f"Could not find data column '{metric_col}' in the merged dataset. Check your CSV column names!")
+        st.stop()
+
     gdf_plot.plot(
         column=metric_col,
         ax=ax_map,
         legend=True,
-        missing_kwds={"color": "lightgrey", "label": "No Data"},
+        missing_kwds={"color": "lightgrey"},
     )
     ax_map.set_axis_off()
     st.pyplot(fig_map, clear_figure=True)
@@ -143,12 +126,12 @@ def main() -> None:
 
     chart_data = (
         gdf_plot[[country_col, metric_col]]
-        .dropna(subset=[metric_col])
+        .dropna()
         .astype({metric_col: float})
     )
 
     if chart_data.empty:
-        st.warning("No tabular data available to plot for this metric.")
+        st.warning("No data available for this metric.")
         st.stop()
 
     chart_desc = chart_data.sort_values(by=metric_col, ascending=False)
@@ -157,26 +140,24 @@ def main() -> None:
 
     left_col, right_col = st.columns(2)
 
-    # Detect formatting style based on dataset name
+    # Detect formatting style
     is_index_dataset = "Index" in dataset_name
     is_percentage = "Share" in dataset_name
 
     def format_value(v: float) -> str:
-        """Formats the metric values for chart labels based on the dataset type."""
         if is_index_dataset:
             return f"{v:.3f}"
         if is_percentage:
             return f"{v:.2f}%"
         return f"{v:,.0f}"
 
-    def apply_axis_format(ax: plt.Axes) -> None:
-        """Applies specific formatting to the x-axis depending on the dataset."""
+    def apply_axis_format(ax):
         if not is_index_dataset and not is_percentage:
             ax.xaxis.set_major_formatter(
                 FuncFormatter(lambda x, _: f"{x:,.0f}")
             )
 
-    # ---- TOP 5 CHART ----
+    # ---- TOP ----
     with left_col:
         st.markdown("### ✅ Top 5")
         fig_top, ax_top = plt.subplots(figsize=(7, 4))
@@ -186,6 +167,7 @@ def main() -> None:
             color="green",
         )
         ax_top.invert_yaxis()
+
         apply_axis_format(ax_top)
 
         for i, value in enumerate(top_5[metric_col].tolist()):
@@ -198,7 +180,7 @@ def main() -> None:
 
         st.pyplot(fig_top, clear_figure=True)
 
-    # ---- BOTTOM 5 CHART ----
+    # ---- BOTTOM ----
     with right_col:
         st.markdown("### ❌ Bottom 5")
         fig_bottom, ax_bottom = plt.subplots(figsize=(7, 4))
@@ -208,6 +190,7 @@ def main() -> None:
             color="red",
         )
         ax_bottom.invert_yaxis()
+
         apply_axis_format(ax_bottom)
 
         for i, value in enumerate(bottom_5[metric_col].tolist()):
@@ -219,6 +202,7 @@ def main() -> None:
             ax_bottom.set_xlim(min_val * 0.999, max_val * 1.001)
 
         st.pyplot(fig_bottom, clear_figure=True)
+
 
 if __name__ == "__main__":
     main()
