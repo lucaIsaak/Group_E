@@ -231,46 +231,44 @@ def main() -> None:
     if year_used is not None:
         st.caption(f"Using most recent year with data: {year_used}")
 
-    # ---------- REGION FILTER ----------
+   # ---------- REGION FILTER ----------
     if region_col is not None:
         gdf_year[region_col] = gdf_year[region_col].apply(normalize_region_name)
         all_regions = sorted(
-            [r for r in gdf_year[region_col].dropna().unique().tolist() if r != "Unknown"]
-        )
+        [r for r in gdf_year[region_col].dropna().unique().tolist() if r != "Unknown"]
+    )
 
-        # Session state defaults
-        if "selected_regions" not in st.session_state:
-            st.session_state.selected_regions = all_regions.copy()
+    # Ensure state exists and is valid
+    if "regions_filter" not in st.session_state:
+        st.session_state.regions_filter = all_regions.copy()
+    else:
+        # If dataset/year changes, remove regions that no longer exist
+        st.session_state.regions_filter = [
+            r for r in st.session_state.regions_filter if r in all_regions
+        ]
+        # If empty (e.g., after switching dataset), reset to all
+        if not st.session_state.regions_filter:
+            st.session_state.regions_filter = all_regions.copy()
 
-        # Buttons for Select all / Clear
-        btn_col1, btn_col2, _ = st.columns([1, 1, 6])
-        with btn_col1:
-            if st.button("Select all regions"):
-                st.session_state.selected_regions = all_regions.copy()
-        with btn_col2:
-            if st.button("Clear regions"):
-                st.session_state.selected_regions = []
+    # Buttons should update the SAME state that the widget uses
+    b1, b2, _ = st.columns([1, 1, 6])
+    with b1:
+        if st.button("Select all regions", key="btn_select_all_regions"):
+            st.session_state.regions_filter = all_regions.copy()
+    with b2:
+        if st.button("Clear regions", key="btn_clear_regions"):
+            st.session_state.regions_filter = []
 
-        selected_regions = st.multiselect(
-            "Filter by region/continent:",
-            options=all_regions,
-            default=st.session_state.selected_regions,
-        )
-        st.session_state.selected_regions = selected_regions
+    # IMPORTANT: Use key=... and DO NOT pass default=...
+    st.multiselect(
+        "Filter by region/continent:",
+        options=all_regions,
+        key="regions_filter",
+    )
 
-        # Apply filter
-        gdf_year = gdf_year[gdf_year[region_col].isin(selected_regions)].copy()
-
-    if gdf_year.empty:
-        st.warning("No countries match the current region filter.")
-        st.stop()
-
-    # Ensure metric numeric and still has data after filtering
-    gdf_year[metric_col] = pd.to_numeric(gdf_year[metric_col], errors="coerce")
-    if gdf_year.dropna(subset=[metric_col]).empty:
-        st.error("No metric values available for the current filters.")
-        st.stop()
-
+    # Apply filter using the widget state
+    gdf_year = gdf_year[gdf_year[region_col].isin(st.session_state.regions_filter)].copy()
+    
     # ---------- MAP ----------
     st.subheader("World Map (click a country)")
     map_fig = build_map(gdf_year, country_col, metric_col, dataset_name)
