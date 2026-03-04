@@ -354,8 +354,8 @@ def render_set_kpis(kpis: SetKpis) -> None:
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Countries with data", f"{kpis.countries_with_data:,}")
     col2.metric("Average", f"{kpis.avg:,.3f}")
-    col3.metric("Median", f"{kpis.median:,.3f}")
-    col4.metric("Range", f"{kpis.min_val:,.3f} to {kpis.max_val:,.3f}")
+    #col3.metric("Median", f"{kpis.median:,.3f}")
+    col3.metric("Range", f"{kpis.min_val:,.3f} to {kpis.max_val:,.3f}")
 
 
 def render_selected_country(kpis: CountryKpis) -> None:
