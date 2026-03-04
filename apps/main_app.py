@@ -1,5 +1,6 @@
 """
 apps/main_app.py
+
 Interactive Streamlit dashboard for Project Okavango.
 
 Features
@@ -8,47 +9,92 @@ Features
 - Interactive world map (click country)
 - KPIs always shown for current filtered set
 - If no country selected: show Top 5 + Bottom 5 bar charts
+- Deselecting on the map clears the selected country
 """
 
 from __future__ import annotations
 
 import sys
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-ROOT_PATH = Path(__file__).resolve().parent.parent
-sys.path.append(str(ROOT_PATH))
+# ---------------------------------------------------------------------
+# Import project code
+# ---------------------------------------------------------------------
 
-from main import OkavangoData  # noqa: E402
+ROOT_PATH = Path(__file__).resolve().parent.parent
+if str(ROOT_PATH) not in sys.path:
+    sys.path.append(str(ROOT_PATH))
+
+from main import OkavangoData  # pylint: disable=wrong-import-position
+
+# ---------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------
+
+BASE_PARAMS = "csvType=full&useColumnShortNames=true"
+
+REGION_STATE_KEY = "regions_filter"
+COUNTRY_STATE_KEY = "selected_iso3"
+
+BTN_SELECT_ALL_KEY = "btn_select_all_regions"
+BTN_CLEAR_REGIONS_KEY = "btn_clear_regions"
+BTN_CLEAR_COUNTRY_KEY = "btn_clear_country"
+
+DEFAULT_MAP_HEIGHT = 560
+DEFAULT_BAR_HEIGHT = 320
+
+
+@dataclass(frozen=True)
+class SetKpis:
+    """KPIs computed over the currently filtered set."""
+
+    countries_with_data: int
+    avg: float
+    median: float
+    min_val: float
+    max_val: float
+
+
+@dataclass(frozen=True)
+class CountryKpis:
+    """KPIs computed for a selected country within the filtered set."""
+
+    country: str
+    iso3: str
+    value: float
+    rank: int
+    total: int
 
 
 def build_dataset_config() -> Dict[str, str]:
-    base_params = "csvType=full&useColumnShortNames=true"
+    """Return dataset URLs used by OkavangoData."""
     return {
         "annual_change_forest_area.csv": (
             "https://ourworldindata.org/grapher/annual-change-forest-area.csv?"
-            f"{base_params}"
+            f"{BASE_PARAMS}"
         ),
         "annual_deforestation.csv": (
             "https://ourworldindata.org/grapher/annual-deforestation.csv?"
-            f"{base_params}"
+            f"{BASE_PARAMS}"
         ),
         "protected_land.csv": (
             "https://ourworldindata.org/grapher/terrestrial-protected-areas.csv?"
-            f"{base_params}"
+            f"{BASE_PARAMS}"
         ),
         "degraded_land.csv": (
             "https://ourworldindata.org/grapher/share-degraded-land.csv?"
-            f"{base_params}"
+            f"{BASE_PARAMS}"
         ),
         "red_list_index.csv": (
             "https://ourworldindata.org/grapher/red-list-index.csv?"
-            f"{base_params}"
+            f"{BASE_PARAMS}"
         ),
         "ne_110m_admin_0_countries.zip": (
             "https://naciscdn.org/naturalearth/110m/cultural/"
@@ -59,48 +105,126 @@ def build_dataset_config() -> Dict[str, str]:
 
 @st.cache_resource
 def get_processed_data(dataset_config: Dict[str, str]) -> OkavangoData:
+    """Initialize and cache OkavangoData (avoids re-download each rerun)."""
     return OkavangoData(dataset_config)
 
 
-def find_country_column(columns: list[str]) -> Optional[str]:
+def find_country_column(columns: Sequence[str]) -> Optional[str]:
+    """Pick a country label column from Natural Earth."""
     for col in ("ADMIN", "admin", "NAME", "name", "NAME_EN"):
         if col in columns:
             return col
     return None
 
 
-def find_region_column(columns: list[str]) -> Optional[str]:
-    # Natural Earth commonly provides CONTINENT; REGION_UN is another good fallback.
-    for col in ("CONTINENT", "continent", "REGION_UN", "region_un", "REGION_WB", "region_wb"):
+def find_region_column(columns: Sequence[str]) -> Optional[str]:
+    """Pick a continent/region column from Natural Earth (if present)."""
+    for col in (
+        "CONTINENT",
+        "continent",
+        "REGION_UN",
+        "region_un",
+        "REGION_WB",
+        "region_wb",
+    ):
         if col in columns:
             return col
     return None
 
 
-def normalize_region_name(x: object) -> str:
-    if x is None or (isinstance(x, float) and np.isnan(x)):
+def normalize_region_name(value: object) -> str:
+    """Normalize region values for UI display."""
+    if value is None or (isinstance(value, float) and np.isnan(value)):
         return "Unknown"
-    s = str(x).strip()
-    return s if s else "Unknown"
+    text = str(value).strip()
+    return text if text else "Unknown"
 
 
 def latest_year_with_metric_data(
     df: pd.DataFrame, metric_col: str
 ) -> Tuple[pd.DataFrame, Optional[int]]:
+    """
+    Filter to the most recent year that has non-null metric data.
+
+    Returns (df_filtered, year_used).
+    """
     if "year" not in df.columns:
         return df.copy(), None
 
+    year_series = pd.to_numeric(df["year"], errors="coerce")
     metric_series = pd.to_numeric(df[metric_col], errors="coerce")
+
     valid = df.loc[metric_series.notna()].copy()
     if valid.empty:
         return df.copy(), None
 
     latest_year = int(pd.to_numeric(valid["year"], errors="coerce").max())
-    return df.loc[pd.to_numeric(df["year"], errors="coerce") == latest_year].copy(), latest_year
+    return df.loc[year_series == latest_year].copy(), latest_year
 
 
-def build_map(df: pd.DataFrame, country_col: str, metric_col: str, dataset_name: str):
+def ensure_metric_numeric(df: pd.DataFrame, metric_col: str) -> pd.DataFrame:
+    """Ensure metric column is numeric (coerce errors to NaN)."""
+    out = df.copy()
+    out[metric_col] = pd.to_numeric(out[metric_col], errors="coerce")
+    return out
+
+
+def init_session_state(all_regions: List[str]) -> None:
+    """Initialize session state keys if missing."""
+    if REGION_STATE_KEY not in st.session_state:
+        st.session_state[REGION_STATE_KEY] = all_regions.copy()
+    if COUNTRY_STATE_KEY not in st.session_state:
+        st.session_state[COUNTRY_STATE_KEY] = None
+
+
+def render_region_filter(gdf_year: pd.DataFrame, region_col: Optional[str]) -> pd.DataFrame:
+    """Render region filter UI and return filtered dataframe."""
+    if region_col is None:
+        return gdf_year
+
+    df = gdf_year.copy()
+    df[region_col] = df[region_col].apply(normalize_region_name)
+
+    all_regions = sorted(
+        [r for r in df[region_col].dropna().unique().tolist() if r != "Unknown"]
+    )
+
+    init_session_state(all_regions)
+
+    current = [r for r in st.session_state[REGION_STATE_KEY] if r in all_regions]
+    if not current:
+        current = all_regions.copy()
+    st.session_state[REGION_STATE_KEY] = current
+
+    btn_col1, btn_col2, _ = st.columns([1, 1, 6])
+    with btn_col1:
+        if st.button("Select all regions", key=BTN_SELECT_ALL_KEY):
+            st.session_state[REGION_STATE_KEY] = all_regions.copy()
+    with btn_col2:
+        if st.button("Clear regions", key=BTN_CLEAR_REGIONS_KEY):
+            st.session_state[REGION_STATE_KEY] = []
+
+    st.multiselect(
+        "Filter by region/continent:",
+        options=all_regions,
+        key=REGION_STATE_KEY,
+    )
+
+    return df[df[region_col].isin(st.session_state[REGION_STATE_KEY])].copy()
+
+
+def build_map(
+    df: pd.DataFrame,
+    country_col: str,
+    metric_col: str,
+    dataset_name: str,
+):
+    """Build Plotly choropleth."""
     plot_df = df.copy()
+
+    if "code" not in plot_df.columns:
+        raise KeyError("Column 'code' (ISO-3) missing. Choropleth needs ISO-3 codes.")
+
     plot_df["code"] = plot_df["code"].astype(str)
     plot_df[metric_col] = pd.to_numeric(plot_df[metric_col], errors="coerce")
 
@@ -114,37 +238,68 @@ def build_map(df: pd.DataFrame, country_col: str, metric_col: str, dataset_name:
         color_continuous_scale="Viridis",
         title=f"World Map: {dataset_name}",
     )
+
     fig.update_traces(marker_line_width=0.5, marker_line_color="rgba(40,40,40,0.8)")
-    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=560)
+    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=DEFAULT_MAP_HEIGHT)
     return fig
 
 
+def selection_is_empty(selection_event) -> bool:
+    """
+    Return True if we received a selection event but it contains no selected points.
+    """
+    if selection_event is None:
+        return False
+
+    selection = getattr(selection_event, "selection", None)
+    if not selection:
+        return True
+
+    points = selection.get("points", []) if isinstance(selection, dict) else []
+    return len(points) == 0
+
+
 def get_selection_iso3(selection_event) -> Optional[str]:
+    """Extract ISO-3 code from Streamlit Plotly selection event."""
     if selection_event is None:
         return None
-    sel = getattr(selection_event, "selection", None)
-    if not sel:
+
+    selection = getattr(selection_event, "selection", None)
+    if not selection:
         return None
-    points = sel.get("points", []) if isinstance(sel, dict) else []
+
+    points = selection.get("points", []) if isinstance(selection, dict) else []
     if not points:
         return None
+
     iso3 = points[0].get("location")
     return str(iso3) if iso3 else None
 
 
-def compute_set_kpis(df: pd.DataFrame, metric_col: str) -> dict:
-    vals = pd.to_numeric(df[metric_col], errors="coerce").dropna().astype(float)
-    if vals.empty:
-        return {"has_data": False}
+def clear_country_if_filtered_out(df: pd.DataFrame) -> None:
+    """Clear selected country if it is no longer present after filtering."""
+    selected = st.session_state.get(COUNTRY_STATE_KEY)
+    if not selected:
+        return
 
-    return {
-        "has_data": True,
-        "countries_with_data": int(vals.shape[0]),
-        "avg": float(vals.mean()),
-        "median": float(vals.median()),
-        "min": float(vals.min()),
-        "max": float(vals.max()),
-    }
+    available = set(df["code"].astype(str).tolist())
+    if selected not in available:
+        st.session_state[COUNTRY_STATE_KEY] = None
+
+
+def compute_set_kpis(df: pd.DataFrame, metric_col: str) -> Optional[SetKpis]:
+    """Compute KPIs over the current filtered set."""
+    values = pd.to_numeric(df[metric_col], errors="coerce").dropna().astype(float)
+    if values.empty:
+        return None
+
+    return SetKpis(
+        countries_with_data=int(values.shape[0]),
+        avg=float(values.mean()),
+        median=float(values.median()),
+        min_val=float(values.min()),
+        max_val=float(values.max()),
+    )
 
 
 def compute_country_kpis(
@@ -152,7 +307,8 @@ def compute_country_kpis(
     country_col: str,
     metric_col: str,
     selected_iso3: str,
-) -> dict:
+) -> Optional[CountryKpis]:
+    """Compute KPIs for a selected country (rank is within filtered set)."""
     tmp = df_year[[country_col, "code", metric_col]].copy()
     tmp["code"] = tmp["code"].astype(str)
     tmp[metric_col] = pd.to_numeric(tmp[metric_col], errors="coerce")
@@ -160,7 +316,7 @@ def compute_country_kpis(
 
     row = tmp.loc[tmp["code"] == selected_iso3]
     if row.empty:
-        return {"found": False}
+        return None
 
     country_name = str(row.iloc[0][country_col])
     value = float(row.iloc[0][metric_col])
@@ -169,17 +325,19 @@ def compute_country_kpis(
     rank_pos = int(ranked.index[ranked["code"] == selected_iso3][0]) + 1
     total = int(len(ranked))
 
-    return {
-        "found": True,
-        "country": country_name,
-        "iso3": selected_iso3,
-        "value": value,
-        "rank": rank_pos,
-        "total": total,
-    }
+    return CountryKpis(
+        country=country_name,
+        iso3=selected_iso3,
+        value=value,
+        rank=rank_pos,
+        total=total,
+    )
 
 
-def compute_top_bottom(df: pd.DataFrame, country_col: str, metric_col: str, n: int = 5):
+def compute_top_bottom(
+    df: pd.DataFrame, country_col: str, metric_col: str, n: int = 5
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Return (top_n, bottom_n) dataframes by metric value."""
     data = df[[country_col, "code", metric_col]].copy()
     data[metric_col] = pd.to_numeric(data[metric_col], errors="coerce")
     data = data.dropna(subset=[metric_col])
@@ -189,7 +347,66 @@ def compute_top_bottom(df: pd.DataFrame, country_col: str, metric_col: str, n: i
     return top_n, bottom_n
 
 
+def render_set_kpis(kpis: SetKpis) -> None:
+    """Render KPIs for the current filtered set."""
+    st.subheader("KPIs (based on current filters)")
+
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Countries with data", f"{kpis.countries_with_data:,}")
+    col2.metric("Average", f"{kpis.avg:,.3f}")
+    col3.metric("Median", f"{kpis.median:,.3f}")
+    col4.metric("Range", f"{kpis.min_val:,.3f} to {kpis.max_val:,.3f}")
+
+
+def render_selected_country(kpis: CountryKpis) -> None:
+    """Render KPIs for selected country."""
+    st.markdown("### Selected country")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Country", f"{kpis.country} ({kpis.iso3})")
+    col2.metric("Value", f"{kpis.value:,.3f}")
+    col3.metric("Rank (within filtered set)", f"{kpis.rank:,} / {kpis.total:,}")
+
+
+def render_top_bottom_charts(
+    df: pd.DataFrame, country_col: str, metric_col: str
+) -> None:
+    """Render Top 5 and Bottom 5 horizontal bar charts."""
+    st.markdown("### Top 5 and Bottom 5 countries (within current filters)")
+
+    top_5, bottom_5 = compute_top_bottom(df, country_col, metric_col, n=5)
+    left, right = st.columns(2)
+
+    with left:
+        st.markdown("#### ✅ Top 5")
+        fig_top = px.bar(
+            top_5.sort_values(metric_col, ascending=True),
+            x=metric_col,
+            y=country_col,
+            orientation="h",
+            hover_data={"code": True},
+        )
+        fig_top.update_layout(
+            height=DEFAULT_BAR_HEIGHT, margin=dict(l=0, r=0, t=10, b=0)
+        )
+        st.plotly_chart(fig_top, use_container_width=True)
+
+    with right:
+        st.markdown("#### ❌ Bottom 5")
+        fig_bottom = px.bar(
+            bottom_5.sort_values(metric_col, ascending=True),
+            x=metric_col,
+            y=country_col,
+            orientation="h",
+            hover_data={"code": True},
+        )
+        fig_bottom.update_layout(
+            height=DEFAULT_BAR_HEIGHT, margin=dict(l=0, r=0, t=10, b=0)
+        )
+        st.plotly_chart(fig_bottom, use_container_width=True)
+
+
 def main() -> None:
+    """Run the Streamlit dashboard."""
     st.set_page_config(page_title="Project Okavango", layout="wide")
     st.title("🌍 Project Okavango: Interactive Dashboard")
 
@@ -204,10 +421,8 @@ def main() -> None:
     dataset_name = st.selectbox("Select dataset:", list(dataset_to_metric.keys()))
     metric_col = dataset_to_metric[dataset_name]
 
-    dataset_config = build_dataset_config()
-
     with st.spinner("Loading data..."):
-        okavango = get_processed_data(dataset_config)
+        okavango = get_processed_data(build_dataset_config())
         gdf = okavango.get_data()
 
     country_col = find_country_column(list(gdf.columns))
@@ -231,55 +446,22 @@ def main() -> None:
     if year_used is not None:
         st.caption(f"Using most recent year with data: {year_used}")
 
-   # ---------- REGION FILTER ----------
-    if region_col is not None:
-        gdf_year[region_col] = gdf_year[region_col].apply(normalize_region_name)
-        all_regions = sorted(
-        [r for r in gdf_year[region_col].dropna().unique().tolist() if r != "Unknown"]
-    )
+    gdf_year = render_region_filter(gdf_year, region_col)
+    if gdf_year.empty:
+        st.warning("No countries match the current region filter.")
+        st.stop()
 
-    # Ensure state exists and is valid
-    if "regions_filter" not in st.session_state:
-        st.session_state.regions_filter = all_regions.copy()
-    else:
-        # If dataset/year changes, remove regions that no longer exist
-        st.session_state.regions_filter = [
-            r for r in st.session_state.regions_filter if r in all_regions
-        ]
-        # If empty (e.g., after switching dataset), reset to all
-        if not st.session_state.regions_filter:
-            st.session_state.regions_filter = all_regions.copy()
+    gdf_year = ensure_metric_numeric(gdf_year, metric_col)
+    if gdf_year.dropna(subset=[metric_col]).empty:
+        st.error("No metric values available for the current filters.")
+        st.stop()
 
-    # Buttons should update the SAME state that the widget uses
-    b1, b2, _ = st.columns([1, 1, 6])
-    with b1:
-        if st.button("Select all regions", key="btn_select_all_regions"):
-            st.session_state.regions_filter = all_regions.copy()
-    with b2:
-        if st.button("Clear regions", key="btn_clear_regions"):
-            st.session_state.regions_filter = []
+    init_session_state(all_regions=[])  # safe init for country key (regions handled above)
+    clear_country_if_filtered_out(gdf_year)
 
-    # IMPORTANT: Use key=... and DO NOT pass default=...
-    st.multiselect(
-        "Filter by region/continent:",
-        options=all_regions,
-        key="regions_filter",
-    )
-
-    # Apply filter using the widget state
-    gdf_year = gdf_year[gdf_year[region_col].isin(st.session_state.regions_filter)].copy()
-    
     # ---------- MAP ----------
     st.subheader("World Map (click a country)")
     map_fig = build_map(gdf_year, country_col, metric_col, dataset_name)
-
-    if "selected_iso3" not in st.session_state:
-        st.session_state.selected_iso3 = None
-
-    # If a country was selected but got filtered out, clear it
-    if st.session_state.selected_iso3:
-        if st.session_state.selected_iso3 not in set(gdf_year["code"].astype(str)):
-            st.session_state.selected_iso3 = None
 
     selection_event = st.plotly_chart(
         map_fig,
@@ -288,75 +470,36 @@ def main() -> None:
         selection_mode="points",
     )
 
-    clicked_iso3 = get_selection_iso3(selection_event)
-    if clicked_iso3:
-        st.session_state.selected_iso3 = clicked_iso3
+    # ✅ NEW BEHAVIOR:
+    # If user deselects (selection event exists but has no points), clear selection.
+    if selection_is_empty(selection_event):
+        st.session_state[COUNTRY_STATE_KEY] = None
+    else:
+        clicked_iso3 = get_selection_iso3(selection_event)
+        if clicked_iso3:
+            st.session_state[COUNTRY_STATE_KEY] = clicked_iso3
 
-    col_a, col_b = st.columns([1, 6])
-    with col_a:
-        if st.button("Clear country"):
-            st.session_state.selected_iso3 = None
+    if st.button("Clear country", key=BTN_CLEAR_COUNTRY_KEY):
+        st.session_state[COUNTRY_STATE_KEY] = None
 
     # ---------- KPIs ALWAYS SHOWN ----------
-    st.subheader("KPIs (based on current filters)")
-
     set_kpis = compute_set_kpis(gdf_year, metric_col)
-    if not set_kpis["has_data"]:
+    if set_kpis is None:
         st.error("No KPI data available for current filters.")
         st.stop()
 
-    k1, k2, k3, k4 = st.columns(4)
-    k1.metric("Countries with data", f"{set_kpis['countries_with_data']:,}")
-    k2.metric("Average", f"{set_kpis['avg']:,.3f}")
-    k3.metric("Median", f"{set_kpis['median']:,.3f}")
-    k4.metric("Range", f"{set_kpis['min']:,.3f} to {set_kpis['max']:,.3f}")
+    render_set_kpis(set_kpis)
 
-    # ---------- COUNTRY KPIs (if selected) OR TOP/BOTTOM CHARTS (if not) ----------
-    selected_iso3 = st.session_state.selected_iso3
-
+    selected_iso3 = st.session_state.get(COUNTRY_STATE_KEY)
     if selected_iso3:
-        st.markdown("### Selected country")
-
         country_kpis = compute_country_kpis(gdf_year, country_col, metric_col, selected_iso3)
-        if not country_kpis.get("found"):
+        if country_kpis is None:
             st.warning("Selected country has no data under current filters.")
             return
+        render_selected_country(country_kpis)
+        return
 
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Country", f"{country_kpis['country']} ({country_kpis['iso3']})")
-        c2.metric("Value", f"{country_kpis['value']:,.3f}")
-        c3.metric("Rank (within filtered set)", f"{country_kpis['rank']:,} / {country_kpis['total']:,}")
-
-    else:
-        st.markdown("### Top 5 and Bottom 5 countries (within current filters)")
-
-        top_5, bottom_5 = compute_top_bottom(gdf_year, country_col, metric_col, n=5)
-
-        left, right = st.columns(2)
-
-        with left:
-            st.markdown("#### ✅ Top 5")
-            fig_top = px.bar(
-                top_5.sort_values(metric_col, ascending=True),
-                x=metric_col,
-                y=country_col,
-                orientation="h",
-                hover_data={"code": True},
-            )
-            fig_top.update_layout(height=320, margin=dict(l=0, r=0, t=10, b=0))
-            st.plotly_chart(fig_top, use_container_width=True)
-
-        with right:
-            st.markdown("#### ❌ Bottom 5")
-            fig_bottom = px.bar(
-                bottom_5.sort_values(metric_col, ascending=True),
-                x=metric_col,
-                y=country_col,
-                orientation="h",
-                hover_data={"code": True},
-            )
-            fig_bottom.update_layout(height=320, margin=dict(l=0, r=0, t=10, b=0))
-            st.plotly_chart(fig_bottom, use_container_width=True)
+    render_top_bottom_charts(gdf_year, country_col, metric_col)
 
 
 if __name__ == "__main__":
