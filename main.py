@@ -100,4 +100,3 @@ class OkavangoData:
     def get_data(self) -> gpd.GeoDataFrame:
         """Returns the processed GeoDataFrame."""
         return self.merged_gdf
-    

@@ -501,6 +501,5 @@ def main() -> None:
 
     render_top_bottom_charts(gdf_year, country_col, metric_col)
 
-
 if __name__ == "__main__":
     main()
