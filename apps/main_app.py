@@ -1,6 +1,6 @@
 """
 apps/main_app.py
-Minimal Streamlit dashboard for Project Okavango.
+Minimal Streamlit dashboard for Project Okavango (interactive selection + KPIs).
 
 Run:
     streamlit run apps/main_app.py
@@ -12,11 +12,10 @@ import sys
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
-import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from matplotlib.ticker import FuncFormatter
 
 # Ensure apps/ can import from project root
 ROOT_PATH = Path(__file__).resolve().parent.parent
@@ -70,11 +69,13 @@ def find_country_column(columns: list[str]) -> Optional[str]:
     return None
 
 
-def latest_year_with_metric_data(df: pd.DataFrame, metric_col: str) -> Tuple[pd.DataFrame, Optional[int]]:
+def latest_year_with_metric_data(
+    df: pd.DataFrame, metric_col: str
+) -> Tuple[pd.DataFrame, Optional[int]]:
     """
     Return (df_filtered_to_latest_year_with_metric_data, year).
 
-    This prevents blank maps when the absolute latest year has NaNs for this metric.
+    Prevents blank maps when absolute latest year has NaNs for this metric.
     """
     if "year" not in df.columns:
         return df.copy(), None
@@ -90,21 +91,10 @@ def latest_year_with_metric_data(df: pd.DataFrame, metric_col: str) -> Tuple[pd.
     return df.loc[year_series == latest_year].copy(), latest_year
 
 
-def format_axis_int(x: float, _: int) -> str:
-    """Format ticks without scientific notation."""
-    return f"{x:,.0f}"
-
-
-def apply_axis_format(ax: plt.Axes) -> None:
-    """Avoid scientific notation for bar charts."""
-    ax.xaxis.set_major_formatter(FuncFormatter(format_axis_int))
-
-
 def build_map(df: pd.DataFrame, country_col: str, metric_col: str, dataset_name: str):
-    """Build Plotly choropleth (colored)."""
+    """Build Plotly choropleth (colored) with click/selection enabled."""
     plot_df = df.copy()
 
-    # Required for Plotly choropleth
     if "code" not in plot_df.columns:
         raise KeyError("Missing required 'code' column (ISO-3).")
 
@@ -117,6 +107,7 @@ def build_map(df: pd.DataFrame, country_col: str, metric_col: str, dataset_name:
         locationmode="ISO-3",
         color=metric_col,
         hover_name=country_col,
+        hover_data={"code": True, metric_col: ":,.3f"},
         color_continuous_scale="Viridis",
         title=f"World Map: {dataset_name}",
     )
@@ -127,15 +118,76 @@ def build_map(df: pd.DataFrame, country_col: str, metric_col: str, dataset_name:
     return fig
 
 
-def compute_top_bottom(df: pd.DataFrame, country_col: str, metric_col: str, n: int = 5):
-    """Compute top and bottom N by metric."""
-    data = df[[country_col, metric_col]].copy()
-    data[metric_col] = pd.to_numeric(data[metric_col], errors="coerce")
-    data = data.dropna(subset=[country_col, metric_col])
+def get_selection_iso3(selection_event) -> Optional[str]:
+    """
+    Extract ISO-3 code from Streamlit Plotly selection event.
+    For choropleth, plotly point usually contains `location`.
+    """
+    if selection_event is None:
+        return None
 
-    top_n = data.sort_values(metric_col, ascending=False).head(n)
-    bottom_n = data.sort_values(metric_col, ascending=True).head(n)
-    return top_n, bottom_n
+    # Newer Streamlit returns an object with `.selection`
+    sel = getattr(selection_event, "selection", None)
+    if not sel:
+        return None
+
+    points = sel.get("points", []) if isinstance(sel, dict) else []
+    if not points:
+        return None
+
+    # Choropleth returns ISO3 in `location`
+    iso3 = points[0].get("location")
+    if iso3:
+        return str(iso3)
+
+    return None
+
+
+def compute_country_kpis(
+    df_year: pd.DataFrame,
+    country_col: str,
+    metric_col: str,
+    selected_iso3: str,
+) -> dict:
+    """Compute KPI dictionary for the selected country for the current year slice."""
+    tmp = df_year[[country_col, "code", metric_col]].copy()
+    tmp["code"] = tmp["code"].astype(str)
+    tmp[metric_col] = pd.to_numeric(tmp[metric_col], errors="coerce")
+    tmp = tmp.dropna(subset=[metric_col])
+
+    row = tmp.loc[tmp["code"] == selected_iso3]
+    if row.empty:
+        return {"found": False}
+
+    country_name = str(row.iloc[0][country_col])
+    value = float(row.iloc[0][metric_col])
+
+    # Ranking (higher = better) — you can flip this if your metric meaning differs
+    ranked = tmp.sort_values(metric_col, ascending=False).reset_index(drop=True)
+    rank_pos = int(ranked.index[ranked["code"] == selected_iso3][0]) + 1
+    total = int(len(ranked))
+    percentile = 100.0 * (1.0 - (rank_pos - 1) / max(total - 1, 1))
+
+    world_avg = float(ranked[metric_col].mean())
+    world_med = float(ranked[metric_col].median())
+    world_min = float(ranked[metric_col].min())
+    world_max = float(ranked[metric_col].max())
+
+    return {
+        "found": True,
+        "country": country_name,
+        "iso3": selected_iso3,
+        "value": value,
+        "rank": rank_pos,
+        "total": total,
+        "percentile": percentile,
+        "world_avg": world_avg,
+        "world_med": world_med,
+        "world_min": world_min,
+        "world_max": world_max,
+        "diff_vs_avg": value - world_avg,
+        "diff_vs_med": value - world_med,
+    }
 
 
 def main() -> None:
@@ -178,46 +230,76 @@ def main() -> None:
     if year_used is not None:
         st.caption(f"Using most recent year with data: {year_used}")
 
-    # If metric is empty -> warn
     gdf_year[metric_col] = pd.to_numeric(gdf_year[metric_col], errors="coerce")
     if gdf_year.dropna(subset=[metric_col]).empty:
         st.error("No metric values available to color the map for this dataset.")
         st.stop()
 
     # ---- MAP ----
-    st.subheader("World Map")
-    try:
-        map_fig = build_map(gdf_year, country_col, metric_col, dataset_name)
-    except KeyError as exc:
-        st.error(str(exc))
-        st.stop()
+    st.subheader("World Map (click a country)")
+    map_fig = build_map(gdf_year, country_col, metric_col, dataset_name)
 
-    st.plotly_chart(map_fig, use_container_width=True)
+    # Persist selection across reruns
+    if "selected_iso3" not in st.session_state:
+        st.session_state.selected_iso3 = None
 
-    # ---- TOP/BOTTOM ----
-    st.subheader("Top 5 and Bottom 5 Countries (same selection as map)")
+    # Streamlit Plotly selection (click/box/lasso)
+    selection_event = st.plotly_chart(
+        map_fig,
+        use_container_width=True,
+        on_select="rerun",
+        selection_mode="points",
+    )
 
-    top_5, bottom_5 = compute_top_bottom(gdf_year, country_col, metric_col, n=5)
+    clicked_iso3 = get_selection_iso3(selection_event)
+    if clicked_iso3:
+        st.session_state.selected_iso3 = clicked_iso3
 
-    left, right = st.columns(2)
+    # Optional: clear selection button
+    col_a, col_b = st.columns([1, 6])
+    with col_a:
+        if st.button("Clear selection"):
+            st.session_state.selected_iso3 = None
 
-    with left:
-        st.markdown("### ✅ Top 5")
-        fig_top, ax_top = plt.subplots(figsize=(7, 4))
-        ax_top.barh(top_5[country_col].astype(str), top_5[metric_col].astype(float))
-        ax_top.invert_yaxis()
-        ax_top.set_xlabel("Value")
-        apply_axis_format(ax_top)
-        st.pyplot(fig_top, clear_figure=True)
+    # ---- KPIs (instead of bar charts) ----
+    st.subheader("Country KPIs")
 
-    with right:
-        st.markdown("### ❌ Bottom 5")
-        fig_bottom, ax_bottom = plt.subplots(figsize=(7, 4))
-        ax_bottom.barh(bottom_5[country_col].astype(str), bottom_5[metric_col].astype(float))
-        ax_bottom.invert_yaxis()
-        ax_bottom.set_xlabel("Value")
-        apply_axis_format(ax_bottom)
-        st.pyplot(fig_bottom, clear_figure=True)
+    selected_iso3 = st.session_state.selected_iso3
+    if not selected_iso3:
+        st.info("Click a country on the map to see KPIs here.")
+        # Some global KPIs as a fallback
+        valid_vals = gdf_year[metric_col].dropna().astype(float)
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Countries with data", f"{len(valid_vals):,}")
+        c2.metric("World average", f"{valid_vals.mean():,.3f}")
+        c3.metric("World median", f"{valid_vals.median():,.3f}")
+        c4.metric("World range", f"{valid_vals.min():,.3f} to {valid_vals.max():,.3f}")
+        return
+
+    kpis = compute_country_kpis(gdf_year, country_col, metric_col, selected_iso3)
+    if not kpis.get("found"):
+        st.warning(
+            f"Selection '{selected_iso3}' has no data for the current year selection."
+        )
+        return
+
+    st.markdown(f"### {kpis['country']} ({kpis['iso3']})")
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Value", f"{kpis['value']:,.3f}")
+    c2.metric("Rank (higher is better)", f"{kpis['rank']:,} / {kpis['total']:,}")
+    c3.metric("Percentile", f"{kpis['percentile']:.1f}%")
+    c4.metric("Δ vs world avg", f"{kpis['diff_vs_avg']:,.3f}")
+
+    c5, c6, c7 = st.columns(3)
+    c5.metric("World average", f"{kpis['world_avg']:,.3f}")
+    c6.metric("World median", f"{kpis['world_med']:,.3f}")
+    c7.metric("World min / max", f"{kpis['world_min']:,.3f} / {kpis['world_max']:,.3f}")
+
+    # (Optional) show the exact row for transparency/debug
+    with st.expander("Show selected row data"):
+        show_df = gdf_year.loc[gdf_year["code"].astype(str) == selected_iso3, [country_col, "code", "year", metric_col]].copy()
+        st.dataframe(show_df, use_container_width=True)
 
 
 if __name__ == "__main__":
