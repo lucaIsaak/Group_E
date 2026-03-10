@@ -33,6 +33,7 @@ if str(ROOT_PATH) not in sys.path:
     sys.path.append(str(ROOT_PATH))
 
 from main import OkavangoData  # pylint: disable=wrong-import-position,import-error
+from satellite import fetch_satellite_image  # pylint: disable=wrong-import-position,import-error,wrong-import-order
 
 # ---------------------------------------------------------------------
 # Constants
@@ -57,6 +58,7 @@ P2_LAT_KEY = "p2_latitude"
 P2_LON_KEY = "p2_longitude"
 P2_ZOOM_KEY = "p2_zoom"
 P2_SIZE_KEY = "p2_image_size"
+P2_IMAGE_PATH_KEY = "p2_image_path"
 
 
 @dataclass(frozen=True)
@@ -500,12 +502,23 @@ def render_page2() -> None:
     )
     st.plotly_chart(fig_preview, use_container_width=True)
 
-    st.button("🔍 Analyse Area", type="primary")
-
     st.session_state[P2_LAT_KEY] = latitude
     st.session_state[P2_LON_KEY] = longitude
     st.session_state[P2_ZOOM_KEY] = zoom
     st.session_state[P2_SIZE_KEY] = image_size
+
+    if st.button("🔍 Analyse Area", type="primary"):
+        size_px = int(image_size.split()[0])
+        with st.spinner("Downloading satellite imagery…"):
+            try:
+                img_path = fetch_satellite_image(latitude, longitude, zoom, size_px)
+                st.session_state[P2_IMAGE_PATH_KEY] = str(img_path)
+            except Exception as exc:  # pylint: disable=broad-except
+                st.error(f"Could not fetch satellite image: {exc}")
+
+    if st.session_state.get(P2_IMAGE_PATH_KEY):
+        st.subheader("Satellite Image")
+        st.image(st.session_state[P2_IMAGE_PATH_KEY], use_container_width=True)
 
 
 def render_page1() -> None:
