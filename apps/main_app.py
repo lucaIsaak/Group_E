@@ -32,7 +32,7 @@ ROOT_PATH = Path(__file__).resolve().parent.parent
 if str(ROOT_PATH) not in sys.path:
     sys.path.append(str(ROOT_PATH))
 
-from main import OkavangoData  # pylint: disable=wrong-import-position
+from main import OkavangoData  # pylint: disable=wrong-import-position,import-error
 
 # ---------------------------------------------------------------------
 # Constants
@@ -49,6 +49,14 @@ BTN_CLEAR_COUNTRY_KEY = "btn_clear_country"
 
 DEFAULT_MAP_HEIGHT = 560
 DEFAULT_BAR_HEIGHT = 320
+
+PAGE_MAP = "🌍 World Map"
+PAGE_AI = "🤖 AI Workflow"
+
+P2_LAT_KEY = "p2_latitude"
+P2_LON_KEY = "p2_longitude"
+P2_ZOOM_KEY = "p2_zoom"
+P2_SIZE_KEY = "p2_image_size"
 
 
 @dataclass(frozen=True)
@@ -240,7 +248,7 @@ def build_map(
     )
 
     fig.update_traces(marker_line_width=0.5, marker_line_color="rgba(40,40,40,0.8)")
-    fig.update_layout(margin=dict(l=0, r=0, t=50, b=0), height=DEFAULT_MAP_HEIGHT)
+    fig.update_layout(margin={"l": 0, "r": 0, "t": 50, "b": 0}, height=DEFAULT_MAP_HEIGHT)
     return fig
 
 
@@ -351,10 +359,9 @@ def render_set_kpis(kpis: SetKpis) -> None:
     """Render KPIs for the current filtered set."""
     st.subheader("KPIs (based on current filters)")
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
     col1.metric("Countries with data", f"{kpis.countries_with_data:,}")
     col2.metric("Average", f"{kpis.avg:,.3f}")
-    #col3.metric("Median", f"{kpis.median:,.3f}")
     col3.metric("Range", f"{kpis.min_val:,.3f} to {kpis.max_val:,.3f}")
 
 
@@ -386,7 +393,7 @@ def render_top_bottom_charts(
             hover_data={"code": True},
         )
         fig_top.update_layout(
-            height=DEFAULT_BAR_HEIGHT, margin=dict(l=0, r=0, t=10, b=0)
+            height=DEFAULT_BAR_HEIGHT, margin={"l": 0, "r": 0, "t": 10, "b": 0}
         )
         st.plotly_chart(fig_top, use_container_width=True)
 
@@ -400,14 +407,109 @@ def render_top_bottom_charts(
             hover_data={"code": True},
         )
         fig_bottom.update_layout(
-            height=DEFAULT_BAR_HEIGHT, margin=dict(l=0, r=0, t=10, b=0)
+            height=DEFAULT_BAR_HEIGHT, margin={"l": 0, "r": 0, "t": 10, "b": 0}
         )
         st.plotly_chart(fig_bottom, use_container_width=True)
 
 
-def main() -> None:
-    """Run the Streamlit dashboard."""
-    st.set_page_config(page_title="Project Okavango", layout="wide")
+def _update_country_selection(selection_event) -> None:
+    """Update the selected country in session state from a Plotly map event."""
+    if selection_is_empty(selection_event):
+        st.session_state[COUNTRY_STATE_KEY] = None
+    else:
+        clicked_iso3 = get_selection_iso3(selection_event)
+        if clicked_iso3:
+            st.session_state[COUNTRY_STATE_KEY] = clicked_iso3
+
+
+def _render_country_or_charts(
+    gdf_year: pd.DataFrame, country_col: str, metric_col: str
+) -> None:
+    """Show per-country KPIs if one is selected, otherwise show Top/Bottom charts."""
+    selected_iso3 = st.session_state.get(COUNTRY_STATE_KEY)
+    if selected_iso3:
+        country_kpis = compute_country_kpis(gdf_year, country_col, metric_col, selected_iso3)
+        if country_kpis is None:
+            st.warning("Selected country has no data under current filters.")
+            return
+        render_selected_country(country_kpis)
+        return
+    render_top_bottom_charts(gdf_year, country_col, metric_col)
+
+
+def render_page2() -> None:
+    """Render Page 2: coordinate selection for the AI satellite-imagery workflow."""
+    st.title("🤖 AI Workflow: Environmental Risk Detection")
+    st.markdown(
+        "Select an area of interest. "
+        "The app will fetch satellite imagery and analyse environmental risk."
+    )
+
+    st.subheader("Coordinates & Zoom")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        latitude = st.number_input(
+            "Latitude",
+            min_value=-90.0,
+            max_value=90.0,
+            value=0.0,
+            step=0.0001,
+            format="%.4f",
+            help="Decimal degrees — negative values are South.",
+        )
+    with col2:
+        longitude = st.number_input(
+            "Longitude",
+            min_value=-180.0,
+            max_value=180.0,
+            value=0.0,
+            step=0.0001,
+            format="%.4f",
+            help="Decimal degrees — negative values are West.",
+        )
+    with col3:
+        zoom = st.slider(
+            "Zoom level",
+            min_value=1,
+            max_value=18,
+            value=12,
+            help="Higher zoom = more detail, smaller area covered.",
+        )
+
+    image_size = st.select_slider(
+        "Image resolution",
+        options=["256 px", "512 px", "1024 px"],
+        value="512 px",
+        help="Width and height of the satellite image to download.",
+    )
+
+    st.subheader("Location Preview")
+    preview_df = pd.DataFrame(
+        {"lat": [latitude], "lon": [longitude], "label": ["Selected area"]}
+    )
+    fig_preview = px.scatter_geo(
+        preview_df,
+        lat="lat",
+        lon="lon",
+        hover_name="label",
+        projection="natural earth",
+    )
+    fig_preview.update_traces(marker={"size": 15, "color": "red"})
+    fig_preview.update_layout(
+        height=350, margin={"l": 0, "r": 0, "t": 0, "b": 0}
+    )
+    st.plotly_chart(fig_preview, use_container_width=True)
+
+    st.button("🔍 Analyse Area", type="primary")
+
+    st.session_state[P2_LAT_KEY] = latitude
+    st.session_state[P2_LON_KEY] = longitude
+    st.session_state[P2_ZOOM_KEY] = zoom
+    st.session_state[P2_SIZE_KEY] = image_size
+
+
+def render_page1() -> None:
+    """Render Page 1: interactive world-map dashboard."""
     st.title("🌍 Project Okavango: Interactive Dashboard")
 
     dataset_to_metric: Dict[str, str] = {
@@ -456,13 +558,11 @@ def main() -> None:
         st.error("No metric values available for the current filters.")
         st.stop()
 
-    init_session_state(all_regions=[])  # safe init for country key (regions handled above)
+    init_session_state(all_regions=[])
     clear_country_if_filtered_out(gdf_year)
 
-    # ---------- MAP ----------
     st.subheader("World Map (click a country)")
     map_fig = build_map(gdf_year, country_col, metric_col, dataset_name)
-
     selection_event = st.plotly_chart(
         map_fig,
         use_container_width=True,
@@ -470,36 +570,28 @@ def main() -> None:
         selection_mode="points",
     )
 
-    # ✅ NEW BEHAVIOR:
-    # If user deselects (selection event exists but has no points), clear selection.
-    if selection_is_empty(selection_event):
-        st.session_state[COUNTRY_STATE_KEY] = None
-    else:
-        clicked_iso3 = get_selection_iso3(selection_event)
-        if clicked_iso3:
-            st.session_state[COUNTRY_STATE_KEY] = clicked_iso3
+    _update_country_selection(selection_event)
 
     if st.button("Clear country", key=BTN_CLEAR_COUNTRY_KEY):
         st.session_state[COUNTRY_STATE_KEY] = None
 
-    # ---------- KPIs ALWAYS SHOWN ----------
     set_kpis = compute_set_kpis(gdf_year, metric_col)
     if set_kpis is None:
         st.error("No KPI data available for current filters.")
         st.stop()
 
     render_set_kpis(set_kpis)
+    _render_country_or_charts(gdf_year, country_col, metric_col)
 
-    selected_iso3 = st.session_state.get(COUNTRY_STATE_KEY)
-    if selected_iso3:
-        country_kpis = compute_country_kpis(gdf_year, country_col, metric_col, selected_iso3)
-        if country_kpis is None:
-            st.warning("Selected country has no data under current filters.")
-            return
-        render_selected_country(country_kpis)
-        return
 
-    render_top_bottom_charts(gdf_year, country_col, metric_col)
+def main() -> None:
+    """Run the Streamlit dashboard."""
+    st.set_page_config(page_title="Project Okavango", layout="wide")
+    page = st.sidebar.radio("Navigation", [PAGE_MAP, PAGE_AI])
+    if page == PAGE_AI:
+        render_page2()
+    else:
+        render_page1()
 
 if __name__ == "__main__":
     main()
