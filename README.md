@@ -18,14 +18,14 @@ To run this project, you will need Python installed on your machine along with a
 
 **Step 1: Clone the repository**
 ```bash
-git clone [https://github.com/lucaIsaak/Group_E.git](https://github.com/lucaIsaak/Group_E.git)
+git clone https://github.com/lucaIsaak/Group_E.git         
 cd Group_E
 ```
 
 **Step 2: Install the required dependencies**
 *(Assuming you have a virtual environment activated)*
 ```bash
-pip install streamlit pandas geopandas pydantic requests pytest matplotlib
+pip install -r requirements.txt
 ```
 
 **Step 3: Run the application**
@@ -33,7 +33,6 @@ We use Streamlit for our front-end application. To launch the dashboard, run the
 ```bash
 streamlit run apps/main_app.py
 ```
-*Example Usage:* Once the browser window opens, use the dropdown menu at the top to select a dataset (e.g., "Annual change in forest area"). The app will automatically download the required data, extract the most recent year for each country, and display the choropleth map alongside the Top 5 and Bottom 5 countries.
 
 ---
 
@@ -127,52 +126,72 @@ The following examples were generated using the live application. Each shows a s
 
 **Example 1 — Congo Basin, Democratic Republic of Congo (−2.46°N, 23.30°E, zoom 16)**
 
-The Congo Basin contains the world's second-largest tropical rainforest and is one of the most biodiverse regions on Earth, home to forest elephants, bonobos, and thousands of plant species found nowhere else. It is also a critical global carbon sink. Despite its protected status in many areas, illegal logging and small-scale agricultural clearing are steadily fragmenting the canopy. At zoom 16, the boundary between intact forest and cleared land is clearly visible, with bare earth patches cutting into the green — a pattern consistent with advancing deforestation fronts.
+The Congo Basin contains the world's second-largest tropical rainforest and is one of the most biodiverse regions on Earth, home to forest elephants, bonobos, and thousands of plant species found nowhere else. It is also a critical global carbon sink. Despite its protected status in many areas, illegal logging and small-scale agricultural clearing are steadily fragmenting the canopy. At zoom 16, the boundary between intact forest and cleared land is clearly visible, with bare earth patches cutting into the green, a pattern consistent with advancing deforestation fronts.
 
 ![Congo Basin satellite image](images/sat_-2.4602_23.3034_z16_1024px.png)
 
-> *AI Description:* Dense vegetation predominantly covering the landscape, with patches of bare earth possibly indicating areas of deforestation or clearance. Forested areas show varying shades of green, suggesting different vegetation types. No visible water bodies or urban structures.
+> *AI Description:* The image is a satellite view of a landscape, predominantly covered with dense vegetation. The terrain appears to be a mix of forested areas with varying shades of green, indicating different types of vegetation, and patches of bare earth, possibly indicating areas of deforestation or clearance. There are no visible water bodies or urban structures. The image is taken from a high angle, providing a broad view of the landscape. The vegetation is dense, with a pattern that suggests a natural, undisturbed environment. There are no distinct features that stand out as landmarks or points of interest. The image does not provide any information about the specific location or region.
 
-> *Risk Assessment:*
-> Q1: Is the area experiencing soil erosion due to deforestation or clearance? → **YES**: Patches of bare earth suggest active deforestation.
-> Q2: Is there water pollution risk? → **NO**: No visible water bodies.
-> Q3: Is habitat loss or fragmentation occurring? → **YES**: Bare earth patches amid otherwise dense forest indicate disturbance.
+*Risk Assessment:*
 
-> **VERDICT: AT RISK** — The area shows signs of deforestation and potential habitat fragmentation, which could lead to soil erosion and loss of biodiversity.
+1 Is the area likely to be experiencing soil erosion due to deforestation or clearance? → YES: The presence of patches of bare earth suggests areas of deforestation or clearance, which can lead to soil erosion.
+
+2 Is the area likely to be experiencing water pollution due to agricultural or industrial activities? → NO: There are no visible water bodies, and the image does not provide any information about human activities that could lead to water pollution.
+
+3 Is the area likely to be experiencing habitat loss or fragmentation due to human activities? → YES: The dense vegetation and natural pattern suggest a natural, undisturbed environment, but the presence of patches of bare earth and the lack of distinct features as landmarks or points of interest may indicate some level of disturbance or fragmentation.
+
+4 Is the area likely to be experiencing climate change impacts, such as changes in temperature or precipitation patterns? → NO: There is no information provided about climate change impacts, and the image does not suggest any changes in the environment that could be attributed to climate change.
+
+> **VERDICT: AT RISK** — SUMMARY: The area appears to be at risk due to deforestation or clearance, which could lead to soil erosion and potentially disrupt the natural habitat. However, the lack of information about human activities, water bodies, or climate change impacts makes it difficult to assess the full extent of the environmental risks.
 
 ---
 
 **Example 2 — Athabasca Oil Sands, Alberta, Canada (57.00°N, −111.50°E, zoom 10)**
 
-The Athabasca Oil Sands in northern Alberta represent one of the largest industrial projects in human history and one of the most visible examples of extractive industry destroying a living ecosystem. The oil sands sit beneath a vast expanse of boreal forest and peatland — ecosystems that are among the most carbon-dense and biodiverse in the temperate world, supporting caribou, migratory birds, and freshwater fish species. Open-pit mining strips away all vegetation down to bedrock across areas measured in square kilometres, replacing forest and wetland with tailings ponds filled with toxic by-products. From satellite at zoom 10, the area looks almost lunar: a grey and brown moonscape surrounded by the intact green of the forest it has consumed.
+The Athabasca Oil Sands in northern Alberta represent one of the largest industrial projects in human history and one of the most visible examples of extractive industry destroying a living ecosystem. The oil sands sit beneath a vast expanse of boreal forest and peatland, ecosystems that are among the most carbon-dense and biodiverse in the temperate world, supporting caribou, migratory birds, and freshwater fish species. Open-pit mining strips away all vegetation down to bedrock across areas measured in square kilometres, replacing forest and wetland with tailings ponds filled with toxic by-products. From satellite at zoom 10, the area looks almost lunar: a grey and brown moonscape surrounded by the intact green of the forest it has consumed.
 
 ![Athabasca Oil Sands satellite image](images/sat_57.0000_-111.5000_z10_1024px.png)
 
-> *AI Description:* A highly disturbed industrial landscape. Large areas of stripped earth and exposed sediment surround what appear to be tailings ponds with dark, oily water. The terrain is almost entirely bare, with no natural vegetation remaining within the extraction zone. The surrounding area shows dense boreal forest, creating a sharp boundary between intact ecosystem and total destruction.
+> *AI Description:* The image is a satellite view of a landscape, showcasing a mix of natural and human-made features. The terrain appears to be a blend of forested areas and open land, with a variety of vegetation, including what seems to be a dense canopy of trees in the lower right quadrant. There are also patches of bare land, possibly indicating deforestation or clearance for development.
+Several water bodies are visible, including a large body of water in the upper left quadrant, which could be a lake or a river. There are also smaller bodies of water scattered throughout the landscape.
+Urban structures are present in the form of a grid-like pattern of roads or pathways, with some buildings or structures visible, particularly in the lower right quadrant. These structures are surrounded by a mix of vegetation and open land, suggesting a rural or semi-rural setting.
+The image also shows a few notable features such as a large, open area in the lower left quadrant that could be a mining site or a large clearing, and a few smaller, circular structures that might be storage tanks or ponds. The overall impression is of a landscape that is undergoing development, with a balance of natural and human-made elements.
 
-> *Risk Assessment:*
-> Q1: Is the natural vegetation completely removed in the extraction zone? → **YES**: No vegetation visible within the industrial perimeter.
-> Q2: Are there signs of toxic water contamination? → **YES**: Tailings ponds contain industrial by-products and show no signs of natural water.
-> Q3: Is habitat loss total and ongoing? → **YES**: The scale of removal is industrial — entire ecosystems permanently replaced.
+*Risk Assessment:*
 
-> **VERDICT: AT RISK** — Total and irreversible destruction of boreal peatland and forest ecosystem. One of the clearest examples of extractive industry-driven biodiversity loss visible from space.
+1 Is there a visible risk of deforestation or land degradation in the area? → YES: The presence of patches of bare land, possibly indicating deforestation or clearance for development, suggests a risk of land degradation.
+
+2 Are there any visible water bodies that could be contaminated or affected by human activities? → UNCERTAIN: While the description mentions several water bodies, it does not provide information on their current water quality or potential contamination sources.
+
+3 Are there any visible signs of mining or extractive activities in the area? → YES: The large, open area in the lower left quadrant could be a mining site or a large clearing, suggesting a potential risk of environmental contamination.
+
+4 Are there any visible signs of urban or industrial activities that could pose a risk to local ecosystems? → YES: The grid-like pattern of roads or pathways, buildings or structures, and storage tanks or ponds suggest a presence of urban or industrial activities that could impact local ecosystems.
+
+5 Is there a visible risk of flooding or water pollution in the area? → UNCERTAIN: While the description mentions several water bodies, it does not provide information on their current water levels, flow rates, or potential sources of pollution.
+
+> **VERDICT: AT RISK** — SUMMARY: The area appears to be undergoing development, with visible signs of deforestation, mining, and urban or industrial activities that could pose risks to local ecosystems.
 
 ---
 
 **Example 3 — Aral Sea, Kazakhstan/Uzbekistan (44.50°N, 59.50°E, zoom 8)**
 
-The Aral Sea was once the fourth-largest lake in the world, spanning over 68,000 km² and supporting a thriving fishing industry and rich aquatic ecosystem. Starting in the 1960s, Soviet irrigation projects diverted the two rivers feeding it to grow cotton in the surrounding desert. By the 2000s, the sea had lost over 90% of its volume, splitting into disconnected remnants surrounded by a salt flat known as the Aralkum — a newly created desert. The exposed lakebed is now toxic, laced with pesticide residue from decades of agricultural runoff, and regular dust storms carry that contaminated salt hundreds of kilometres across Central Asia. The fishing communities and the ecosystems that supported them are gone. At zoom 8, you can see the remaining water body as a pale shadow of what it once was, surrounded by the bleached, cracked remains of the former lakebed.
+The Aral Sea was once the fourth-largest lake in the world, spanning over 68,000 km² and supporting a thriving fishing industry and rich aquatic ecosystem. Starting in the 1960s, Soviet irrigation projects diverted the two rivers feeding it to grow cotton in the surrounding desert. By the 2000s, the sea had lost over 90% of its volume, splitting into disconnected remnants surrounded by a salt flat known as the Aralkum, a newly created desert. The exposed lakebed is now toxic, laced with pesticide residue from decades of agricultural runoff, and regular dust storms carry that contaminated salt hundreds of kilometres across Central Asia. The fishing communities and the ecosystems that supported them are gone. At zoom 8, you can see the remaining water body as a pale shadow of what it once was, surrounded by the bleached, cracked remains of the former lakebed.
 
-![Aral Sea satellite image](images/sat_44.5000_59.9000_z8_512px.png)
+![Aral Sea satellite image](images/sat_44.5000_59.5000_z8_1024px.png)
 
-> *AI Description:* A largely dried lakebed. A small remnant water body is visible in the upper portion of the image, pale and shallow. The surrounding terrain is flat, white, and salt-encrusted with no vegetation. The absence of any transition zone between land and water suggests rapid and ongoing desiccation. No urban structures or healthy ecosystems visible.
+> *AI Description:* The image is a satellite view of a desert landscape. The terrain is predominantly arid with sparse vegetation, primarily in the lower right corner. There are several water bodies scattered throughout the image, including a large body of water in the center and smaller bodies of water in the upper left and lower right corners. The water bodies appear to be lakes or oases. There are no urban structures visible in the image. The overall color palette is dominated by shades of brown and green, indicative of the desert environment and sparse vegetation.
 
-> *Risk Assessment:*
-> Q1: Is there evidence of severe and irreversible water loss? → **YES**: The near-total disappearance of the water body is clearly visible.
-> Q2: Is the surrounding land contaminated or degraded? → **YES**: Salt and toxic residue from the dried lakebed is visible across the terrain.
-> Q3: Can this area support biodiversity in its current state? → **NO**: No vegetation, no healthy water body, no habitat remaining.
+*Risk Assessment:*
 
-> **VERDICT: AT RISK** — One of the worst human-caused environmental disasters in history. The complete collapse of a major water ecosystem due to agricultural overextraction, with no signs of recovery.
+1 What is the primary environmental risk associated with the presence of water bodies in the desert landscape? → YES: The presence of water bodies, such as lakes or oases, in a desert landscape increases the risk of water pollution, as runoff from these bodies can carry pollutants and nutrients into nearby water sources, potentially harming aquatic life.
+
+2 Is the risk of water pollution exacerbated by the presence of sparse vegetation in the lower right corner of the image? → YES: The sparse vegetation in the lower right corner may contribute to increased runoff and erosion, which can carry pollutants into water bodies, exacerbating the risk of water pollution.
+
+3 Are there any potential sources of pollution or contamination in the image that could pose an environmental risk? → NO: There is no information in the description to suggest any potential sources of pollution or contamination, such as industrial activities, agricultural runoff, or waste disposal.
+
+4 Is the risk of water scarcity or drought in the area indicated by the presence of water bodies? → YES: The presence of water bodies, such as lakes or oases, in a desert landscape suggests that the area may be experiencing or experiencing periodic water scarcity or drought, as these features are often formed in response to water availability.
+
+> **VERDICT: AT RISK** — SUMMARY: The presence of water bodies in the desert landscape indicates a risk of water pollution and water scarcity or drought, highlighting the need for careful management and conservation of this valuable resource.
 
 ---
 *License: MIT License*
