@@ -205,3 +205,109 @@ Q4: Are there any areas of high agricultural productivity or potential for soil 
 
 OVERALL VERDICT: AT RISK
 SUMMARY: The area is at risk due to potential flooding, and there may be risks associated with industrial or commercial activities, as well as areas of high agricultural productivity that could lead to soil erosion.",AT RISK
+2026-03-11T14:55:36+00:00,51.1035,16.4994,12,512,/Users/lenny/Group_E/images/sat_51.1035_16.4994_z12_512px.png,llava,"You are analysing a satellite image. Describe in detail what you see: terrain type, vegetation, water bodies, urban structures, and any other notable features. Be specific and concise.
+"," The satellite image displays a rural landscape with a patchwork of agricultural fields. The terrain is predominantly flat with some gentle undulations. The fields are primarily used for crop cultivation, with a mix of green and brown hues indicating varying crop stages or types. There are no visible water bodies or urban structures in the image. The vegetation is dense, with a variety of crops planted in rows. The image is taken from a high angle, providing a comprehensive view of the area. The overall impression is one of a well-maintained agricultural region with a focus on crop production. ",llama3.2,"You are an environmental risk assessment expert reviewing a satellite image description.
+
+Satellite image description:
+ The satellite image displays a rural landscape with a patchwork of agricultural fields. The terrain is predominantly flat with some gentle undulations. The fields are primarily used for crop cultivation, with a mix of green and brown hues indicating varying crop stages or types. There are no visible water bodies or urban structures in the image. The vegetation is dense, with a variety of crops planted in rows. The image is taken from a high angle, providing a comprehensive view of the area. The overall impression is one of a well-maintained agricultural region with a focus on crop production. 
+
+Task: Identify the most relevant environmental risk questions for this specific area,
+then answer each one based solely on the description above.
+Finally, give an overall verdict.
+
+Format your response EXACTLY like this (include all headers):
+Q1: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q2: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q3: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+(add up to 2 more questions if clearly relevant)
+
+OVERALL VERDICT: [AT RISK / NOT AT RISK / UNCERTAIN]
+SUMMARY: [one or two sentences explaining the overall verdict]
+","Q1: Is the area prone to soil erosion due to intensive agricultural practices? → NO: The description does not indicate any specific agricultural practices that could lead to soil erosion.
+Q2: Are there any visible signs of water pollution or contamination in the image? → NO: The description explicitly states that there are no visible water bodies in the image.
+Q3: Is the area susceptible to pests or diseases that could impact crop yields? → UNCERTAIN: The description mentions a mix of green and brown hues indicating varying crop stages or types, but it does not provide information on the specific crops or potential pest/disease issues.
+Q4: Are there any signs of habitat destruction or loss of biodiversity in the image? → NO: The description describes a ""well-maintained agricultural region"" with a focus on crop production, suggesting that the area is not currently experiencing significant habitat destruction or loss of biodiversity.
+
+OVERALL VERDICT: NOT AT RISK
+SUMMARY: The satellite image description does not indicate any significant environmental risks or concerns for the area, suggesting that it is currently well-managed and sustainable.",NOT AT RISK
+2026-03-11T15:01:41+00:00,23.4002,21.5383,9,512,/Users/lenny/Group_E/images/sat_23.4002_21.5383_z12_512px.png,llava,"You are analysing a satellite image. Describe in detail what you see: terrain type, vegetation, water bodies, urban structures, and any other notable features. Be specific and concise.
+"," The image appears to be a satellite view of a barren landscape, likely a desert or semi-arid region. The terrain is characterized by a flat, sandy surface with sparse vegetation, which is predominantly green and sparse, indicating some level of vegetation despite the harsh environment. There are no visible water bodies or urban structures. The landscape is devoid of any significant features, suggesting a remote or undeveloped area. The image is taken from a high angle, providing a broad view of the terrain, and the colors are muted, with a predominance of earth tones. ",llama3.2,"You are an environmental risk assessment expert reviewing a satellite image description.
+
+Satellite image description:
+ The image appears to be a satellite view of a barren landscape, likely a desert or semi-arid region. The terrain is characterized by a flat, sandy surface with sparse vegetation, which is predominantly green and sparse, indicating some level of vegetation despite the harsh environment. There are no visible water bodies or urban structures. The landscape is devoid of any significant features, suggesting a remote or undeveloped area. The image is taken from a high angle, providing a broad view of the terrain, and the colors are muted, with a predominance of earth tones. 
+
+Task: Identify the most relevant environmental risk questions for this specific area,
+then answer each one based solely on the description above.
+Finally, give an overall verdict.
+
+Format your response EXACTLY like this (include all headers):
+Q1: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q2: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q3: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+(add up to 2 more questions if clearly relevant)
+
+OVERALL VERDICT: [AT RISK / NOT AT RISK / UNCERTAIN]
+SUMMARY: [one or two sentences explaining the overall verdict]
+","Q1: Is the area likely to be prone to wildfires? → YES: The barren landscape with sparse vegetation and no visible water bodies increases the risk of wildfires in this area.
+
+Q2: Is the area likely to be contaminated with hazardous waste? → NO: There is no information in the description to suggest the presence of hazardous waste, and the lack of urban structures and water bodies reduces the likelihood of contamination.
+
+Q3: Is the area likely to be vulnerable to drought? → YES: The description of a barren landscape with a flat, sandy surface and sparse vegetation suggests that the area is likely to be vulnerable to drought.
+
+Q4: Is the area likely to be home to endangered species? → UNCERTAIN: While the description suggests some level of vegetation, it does not provide information on the types of vegetation or the presence of endangered species.
+
+OVERALL VERDICT: AT RISK
+SUMMARY: The area appears to be at risk for wildfires, drought, and potentially vulnerable to habitat loss due to its barren landscape and sparse vegetation, despite the presence of some vegetation.",AT RISK
+2026-03-11T15:09:46+00:00,48.1807,8.9611,18,1024,/Users/lenny/Group_E/images/sat_48.1807_8.9611_z18_1024px.png,llava,"You are analysing a satellite image. Describe in detail what you see: terrain type, vegetation, water bodies, urban structures, and any other notable features. Be specific and concise.
+"," The image is an aerial satellite view of a residential area. The terrain is a mix of urban and natural elements. The urban structures consist of a grid of streets with houses on both sides, predominantly with red roofs. There are also some buildings with flat roofs. The vegetation is sparse, with a few trees scattered throughout the area. There are no visible water bodies within the image. The roads are clearly marked, and there are no notable features such as parks or large open spaces. The image provides a comprehensive view of a typical residential neighborhood. ",llama3.2,"You are an environmental risk assessment expert reviewing a satellite image description.
+
+Satellite image description:
+ The image is an aerial satellite view of a residential area. The terrain is a mix of urban and natural elements. The urban structures consist of a grid of streets with houses on both sides, predominantly with red roofs. There are also some buildings with flat roofs. The vegetation is sparse, with a few trees scattered throughout the area. There are no visible water bodies within the image. The roads are clearly marked, and there are no notable features such as parks or large open spaces. The image provides a comprehensive view of a typical residential neighborhood. 
+
+Task: Identify the most relevant environmental risk questions for this specific area,
+then answer each one based solely on the description above.
+Finally, give an overall verdict.
+
+Format your response EXACTLY like this (include all headers):
+Q1: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q2: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q3: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+(add up to 2 more questions if clearly relevant)
+
+OVERALL VERDICT: [AT RISK / NOT AT RISK / UNCERTAIN]
+SUMMARY: [one or two sentences explaining the overall verdict]
+","Q1: Are there any visible water bodies within the image? → NO: There are no visible water bodies within the image.
+
+Q2: Are there any notable features such as parks or large open spaces? → NO: There are no notable features such as parks or large open spaces.
+
+Q3: Is the vegetation sparse? → YES: The vegetation is sparse, with a few trees scattered throughout the area.
+
+Q4: Are the roads clearly marked? → YES: The roads are clearly marked.
+
+OVERALL VERDICT: NOT AT RISK
+SUMMARY: The area appears to be a typical residential neighborhood with no visible environmental hazards or risks.",NOT AT RISK
+2026-03-11T15:10:44+00:00,50.0376,8.5631,16,1024,/Users/lenny/Group_E/images/sat_50.0376_8.5631_z16_1024px.png,llava,"You are analysing a satellite image. Describe in detail what you see: terrain type, vegetation, water bodies, urban structures, and any other notable features. Be specific and concise.
+"," The image is an aerial view of an airport. The terrain is flat and mostly paved, with a few patches of grass. The airport has multiple runways, taxiways, and aprons, all of which are clearly marked. There are several aircraft parked on the tarmac, and a few are in flight. The airport is surrounded by a road network, and there are buildings and structures typical of airport facilities. There are no visible water bodies in this image. The overall layout suggests a well-organized and busy airport with a variety of aircraft and infrastructure. ",llama3.2,"You are an environmental risk assessment expert reviewing a satellite image description.
+
+Satellite image description:
+ The image is an aerial view of an airport. The terrain is flat and mostly paved, with a few patches of grass. The airport has multiple runways, taxiways, and aprons, all of which are clearly marked. There are several aircraft parked on the tarmac, and a few are in flight. The airport is surrounded by a road network, and there are buildings and structures typical of airport facilities. There are no visible water bodies in this image. The overall layout suggests a well-organized and busy airport with a variety of aircraft and infrastructure. 
+
+Task: Identify the most relevant environmental risk questions for this specific area,
+then answer each one based solely on the description above.
+Finally, give an overall verdict.
+
+Format your response EXACTLY like this (include all headers):
+Q1: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q2: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q3: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+(add up to 2 more questions if clearly relevant)
+
+OVERALL VERDICT: [AT RISK / NOT AT RISK / UNCERTAIN]
+SUMMARY: [one or two sentences explaining the overall verdict]
+","Q1: Are there any visible signs of pollution or contamination in the image? → NO: There is no mention of pollution or contamination in the description.
+Q2: Are there any water bodies present in the image? → NO: The description explicitly states that there are no visible water bodies in the image.
+Q3: Are there any areas of high human activity that could lead to environmental degradation? → YES: The description mentions a ""well-organized and busy airport"" with multiple aircraft and infrastructure, indicating high levels of human activity.
+Q4: Are there any areas of sensitive ecosystems or habitats present in the image? → NO: The description does not mention any sensitive ecosystems or habitats.
+
+OVERALL VERDICT: AT RISK
+SUMMARY: The airport's high levels of human activity and potential for pollution or contamination from aircraft operations and infrastructure pose an environmental risk.",AT RISK

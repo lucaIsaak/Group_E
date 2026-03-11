@@ -63,19 +63,21 @@ BTN_CLEAR_COUNTRY_KEY = "btn_clear_country"
 DEFAULT_MAP_HEIGHT = 560
 DEFAULT_BAR_HEIGHT = 320
 
-PAGE_MAP = "🌍 World Map"
-PAGE_AI = "🤖 AI Workflow"
+PAGE_MAP = "World Map"
+PAGE_AI = "AI Workflow"
+PAGE_KEY = "current_page"
 
 P2_LAT_KEY = "p2_latitude"
 P2_LON_KEY = "p2_longitude"
 P2_ZOOM_KEY = "p2_zoom"
-P2_LAST_CLICK_KEY = "p2_last_click"      # last click already processed, to ignore stale repeats
+P2_LAST_CLICK_KEY = "p2_last_click"    # last click already processed, to ignore stale repeats
+P2_STAGED_LAT_KEY = "p2_staged_lat"   # staging key: applied before widgets render
+P2_STAGED_LON_KEY = "p2_staged_lon"
 P2_SIZE_KEY = "p2_image_size"
 P2_IMAGE_PATH_KEY = "p2_image_path"
 P2_DESCRIPTION_KEY = "p2_description"
 P2_RISK_ASSESSMENT_KEY = "p2_risk_assessment"
 P2_RISK_VERDICT_KEY = "p2_risk_verdict"
-
 
 @dataclass(frozen=True)
 class SetKpis:
@@ -254,6 +256,8 @@ def build_map(
     plot_df["code"] = plot_df["code"].astype(str)
     plot_df[metric_col] = pd.to_numeric(plot_df[metric_col], errors="coerce")
 
+    _scale = [[0.0, "#e05a5a"], [0.5, "#f5c842"], [1.0, "#3ecb8a"]]
+
     fig = px.choropleth(
         plot_df,
         locations="code",
@@ -261,12 +265,34 @@ def build_map(
         color=metric_col,
         hover_name=country_col,
         hover_data={"code": True, metric_col: ":,.3f"},
-        color_continuous_scale="Viridis",
-        title=f"World Map: {dataset_name}",
+        color_continuous_scale=_scale,
+        title=f"World Map — {dataset_name}",
     )
 
-    fig.update_traces(marker_line_width=0.5, marker_line_color="rgba(40,40,40,0.8)")
-    fig.update_layout(margin={"l": 0, "r": 0, "t": 50, "b": 0}, height=DEFAULT_MAP_HEIGHT)
+    fig.update_traces(marker_line_width=0.4, marker_line_color="rgba(0,0,0,0.6)")
+    fig.update_geos(
+        showocean=True, oceancolor="#0d2535",
+        showlakes=True, lakecolor="#0d2535",
+        showrivers=True, rivercolor="#0d2535",
+        showcountries=True, countrycolor="rgba(255,255,255,0.12)",
+        showcoastlines=True, coastlinecolor="rgba(255,255,255,0.18)",
+        bgcolor="#0a2420",
+        landcolor="#132e28",
+    )
+    fig.update_layout(
+        margin={"l": 0, "r": 0, "t": 46, "b": 0},
+        height=DEFAULT_MAP_HEIGHT,
+        paper_bgcolor="#0a2420",
+        font={"color": "#ffffff", "family": "Barlow Condensed, sans-serif"},
+        title_font_color="#3ecb8a",
+        coloraxis_colorbar={
+            "tickfont": {"color": "#ffffff"},
+            "title": {"font": {"color": "#7fbfb0"}},
+            "bgcolor": "#0a2420",
+            "bordercolor": "#1e4d42",
+            "borderwidth": 1,
+        },
+    )
     return fig
 
 
@@ -392,6 +418,16 @@ def render_selected_country(kpis: CountryKpis) -> None:
     col3.metric("Rank (within filtered set)", f"{kpis.rank:,} / {kpis.total:,}")
 
 
+_CHART_LAYOUT = {
+    "paper_bgcolor": "#0a2420",
+    "plot_bgcolor": "#0a2420",
+    "font": {"color": "#ffffff", "family": "Barlow Condensed, sans-serif"},
+    "xaxis": {"gridcolor": "#1e4d42", "color": "#7fbfb0"},
+    "yaxis": {"gridcolor": "#1e4d42", "color": "#ffffff"},
+    "margin": {"l": 0, "r": 0, "t": 10, "b": 0},
+}
+
+
 def render_top_bottom_charts(
     df: pd.DataFrame, country_col: str, metric_col: str
 ) -> None:
@@ -402,31 +438,29 @@ def render_top_bottom_charts(
     left, right = st.columns(2)
 
     with left:
-        st.markdown("#### ✅ Top 5")
+        st.markdown("#### Top 5")
         fig_top = px.bar(
             top_5.sort_values(metric_col, ascending=True),
             x=metric_col,
             y=country_col,
             orientation="h",
             hover_data={"code": True},
+            color_discrete_sequence=["#3ecb8a"],
         )
-        fig_top.update_layout(
-            height=DEFAULT_BAR_HEIGHT, margin={"l": 0, "r": 0, "t": 10, "b": 0}
-        )
+        fig_top.update_layout(height=DEFAULT_BAR_HEIGHT, **_CHART_LAYOUT)
         st.plotly_chart(fig_top, use_container_width=True)
 
     with right:
-        st.markdown("#### ❌ Bottom 5")
+        st.markdown("#### Bottom 5")
         fig_bottom = px.bar(
             bottom_5.sort_values(metric_col, ascending=True),
             x=metric_col,
             y=country_col,
             orientation="h",
             hover_data={"code": True},
+            color_discrete_sequence=["#e05a5a"],
         )
-        fig_bottom.update_layout(
-            height=DEFAULT_BAR_HEIGHT, margin={"l": 0, "r": 0, "t": 10, "b": 0}
-        )
+        fig_bottom.update_layout(height=DEFAULT_BAR_HEIGHT, **_CHART_LAYOUT)
         st.plotly_chart(fig_bottom, use_container_width=True)
 
 
@@ -440,19 +474,19 @@ def _update_country_selection(selection_event) -> None:
             st.session_state[COUNTRY_STATE_KEY] = clicked_iso3
 
 
-def _render_country_or_charts(
-    gdf_year: pd.DataFrame, country_col: str, metric_col: str
+def _render_kpis_above_map(
+    gdf_year: pd.DataFrame, country_col: str, metric_col: str, set_kpis: SetKpis
 ) -> None:
-    """Show per-country KPIs if one is selected, otherwise show Top/Bottom charts."""
+    """Render set-level KPIs and, if a country is selected, its individual KPIs."""
+    render_set_kpis(set_kpis)
     selected_iso3 = st.session_state.get(COUNTRY_STATE_KEY)
-    if selected_iso3:
-        country_kpis = compute_country_kpis(gdf_year, country_col, metric_col, selected_iso3)
-        if country_kpis is None:
-            st.warning("Selected country has no data under current filters.")
-            return
-        render_selected_country(country_kpis)
+    if not selected_iso3:
         return
-    render_top_bottom_charts(gdf_year, country_col, metric_col)
+    country_kpis = compute_country_kpis(gdf_year, country_col, metric_col, selected_iso3)
+    if country_kpis is None:
+        st.warning("Selected country has no data under current filters.")
+        return
+    render_selected_country(country_kpis)
 
 
 _ESRI_TILES = (
@@ -486,12 +520,14 @@ def _render_folium_map() -> None:
         icon=folium.Icon(color="red", icon="map-marker"),
     ).add_to(pin_group)
 
-    map_data = st_folium(
-        base_map, height=450, use_container_width=True,
-        returned_objects=["last_clicked"],
-        center=[lat, lon],
-        feature_group_to_add=pin_group,
-    )
+    _, map_col, _ = st.columns([1, 6, 1])
+    with map_col:
+        map_data = st_folium(
+            base_map, height=440, use_container_width=True,
+            returned_objects=["last_clicked"],
+            center=[lat, lon],
+            feature_group_to_add=pin_group,
+        )
 
     if map_data and map_data.get("last_clicked"):
         new_lat = round(map_data["last_clicked"]["lat"], 4)
@@ -499,8 +535,8 @@ def _render_folium_map() -> None:
         new_click = (new_lat, new_lon)
         if new_click != st.session_state.get(P2_LAST_CLICK_KEY):
             st.session_state[P2_LAST_CLICK_KEY] = new_click
-            st.session_state[P2_LAT_KEY] = new_lat
-            st.session_state[P2_LON_KEY] = new_lon
+            st.session_state[P2_STAGED_LAT_KEY] = new_lat
+            st.session_state[P2_STAGED_LON_KEY] = new_lon
             st.rerun()
 
     if st.button("Reset pin", type="tertiary"):
@@ -511,9 +547,9 @@ def _render_folium_map() -> None:
 
 
 def _render_coordinate_inputs() -> None:
-    """Render manual lat/lon/zoom/size inputs."""
-    st.subheader("Coordinates & Zoom")
-    col1, col2, col3 = st.columns(3)
+    """Render manual lat/lon inputs."""
+    st.subheader("Coordinates")
+    col1, col2 = st.columns(2)
     with col1:
         st.number_input("Latitude", min_value=-90.0, max_value=90.0,
                         step=0.0001, format="%.4f",
@@ -524,18 +560,31 @@ def _render_coordinate_inputs() -> None:
                         step=0.0001, format="%.4f",
                         help="Decimal degrees — negative values are West.",
                         key=P2_LON_KEY)
-    with col3:
-        st.slider("Zoom level", min_value=1, max_value=18,
-                  help="Higher zoom = more detail, smaller area covered.",
+
+
+def _render_image_capture_settings() -> None:
+    """Render zoom and resolution controls for the satellite image download."""
+    st.markdown(
+        '<p style="font-size:0.78rem;color:#7fbfb0;margin:0.2rem 0 0.6rem 0;'
+        'text-transform:uppercase;letter-spacing:0.8px;">'
+        'The settings below apply to the downloaded image, not the map preview.'
+        '</p>',
+        unsafe_allow_html=True,
+    )
+    col1, col2 = st.columns(2)
+    with col1:
+        st.slider("Image zoom level", min_value=1, max_value=18,
+                  help="Higher zoom = more detail, smaller geographic area captured.",
                   key=P2_ZOOM_KEY)
-    st.select_slider("Image resolution", options=["256 px", "512 px", "1024 px"],
-                     help="Width and height of the satellite image to download.",
-                     key=P2_SIZE_KEY)
+    with col2:
+        st.select_slider("Image resolution", options=["256 px", "512 px", "1024 px"],
+                         help="Pixel dimensions of the saved satellite image.",
+                         key=P2_SIZE_KEY)
 
 
 def _render_fetch_and_describe() -> None:
     """Render the fetch button, satellite image, and AI description."""
-    if st.button("🔍 Fetch Satellite Image", type="primary"):
+    if st.button("Fetch Satellite Image", type="primary"):
         size_px = int(st.session_state[P2_SIZE_KEY].split()[0])
         cached = find_existing_run(st.session_state[P2_LAT_KEY],
                                    st.session_state[P2_LON_KEY],
@@ -572,7 +621,7 @@ def _render_fetch_and_describe() -> None:
         else:
             st.caption("Click the button below to generate an AI description.")
 
-        if st.button("🤖 Analyse with AI", type="secondary"):
+        if st.button("Analyse with AI", type="secondary"):
             size_px = int(st.session_state[P2_SIZE_KEY].split()[0])
             cached = find_existing_run(st.session_state[P2_LAT_KEY],
                                        st.session_state[P2_LON_KEY],
@@ -595,21 +644,69 @@ def _render_fetch_and_describe() -> None:
                     st.error(f"AI analysis failed: {exc}")
 
 
+def _is_q_line(line: str) -> bool:
+    """Return True if line looks like 'Q1: ...'."""
+    return len(line) >= 3 and line[0] == "Q" and line[1].isdigit() and line[2] == ":"
+
+
+def _format_assessment_html(text: str) -> str:
+    """Convert raw assessment text into styled HTML rows."""
+    rows = []
+    q_num = 0
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        upper = line.upper()
+        if upper.startswith(("OVERALL VERDICT", "OVERALL:")):
+            rows.append(
+                '<div style="margin-top:1rem;padding:0.7rem 1rem;'
+                'background:#1e4d42;border-radius:8px;'
+                'font-family:Barlow Condensed,sans-serif;font-weight:700;'
+                f'font-size:1.05rem;color:#3ecb8a;">{line}</div>'
+            )
+        elif upper.startswith("SUMMARY"):
+            rows.append(
+                f'<p style="color:#7fbfb0;margin:0.4rem 0 0 0;'
+                f'font-style:italic;font-size:0.9rem;">{line}</p>'
+            )
+        elif _is_q_line(line):
+            q_num += 1
+            rows.append(
+                '<div style="display:flex;gap:1rem;margin:0.55rem 0;'
+                'padding:0.5rem 0.8rem;background:#0a2420;border-radius:8px;'
+                'border-left:3px solid #3ecb8a;">'
+                '<span style="color:#3ecb8a;font-weight:800;'
+                'font-family:Barlow Condensed,sans-serif;'
+                f'min-width:1.4rem;font-size:1rem;">{q_num}</span>'
+                f'<span style="font-size:0.9rem;">{line[3:].strip()}</span>'
+                "</div>"
+            )
+        else:
+            rows.append(
+                f'<p style="margin:0.3rem 0;font-size:0.9rem;">{line}</p>'
+            )
+    return "\n".join(rows)
+
+
 def _render_risk_assessment() -> None:
     """Render the environmental risk assessment section."""
     description = st.session_state.get(P2_DESCRIPTION_KEY)
     if st.session_state.get(P2_RISK_ASSESSMENT_KEY):
-        st.subheader("🌿 Environmental Risk Assessment")
-        st.markdown(st.session_state[P2_RISK_ASSESSMENT_KEY])
+        st.subheader("Environmental Risk Assessment")
+        st.markdown(
+            _format_assessment_html(st.session_state[P2_RISK_ASSESSMENT_KEY]),
+            unsafe_allow_html=True,
+        )
         verdict = st.session_state.get(P2_RISK_VERDICT_KEY, "UNCERTAIN")
         if verdict == "AT RISK":
-            st.error("🔴 **AREA FLAGGED AS ENVIRONMENTALLY AT RISK**")
+            st.error("AREA FLAGGED AS ENVIRONMENTALLY AT RISK")
         elif verdict == "NOT AT RISK":
-            st.success("🟢 **No significant environmental risk detected**")
+            st.success("No significant environmental risk detected")
         else:
-            st.warning("🟡 **Environmental risk is uncertain — manual review recommended**")
+            st.warning("Environmental risk is uncertain — manual review recommended")
     elif description:
-        st.subheader("🌿 Environmental Risk Assessment")
+        st.subheader("Environmental Risk Assessment")
         with st.spinner("Assessing environmental risk… this may take a moment."):
             try:
                 full_assessment = st.write_stream(assess_environmental_risk(description))
@@ -634,22 +731,25 @@ def _render_risk_assessment() -> None:
 
 def render_page2() -> None:
     """Render Page 2: coordinate selection for the AI satellite-imagery workflow."""
-    st.title("🤖 AI Workflow: Environmental Risk Detection")
     st.markdown(
-        "Click anywhere on the satellite map to select an area of interest, "
-        "or enter coordinates manually below."
+        "Enter coordinates manually or click on the satellite map below "
+        "to select an area of interest."
     )
     _init_page2_state()
-    _render_folium_map()
+    # Apply any click staged by the previous run BEFORE widgets are instantiated,
+    # to avoid Streamlit's "cannot modify widget-owned key" error.
+    if P2_STAGED_LAT_KEY in st.session_state:
+        st.session_state[P2_LAT_KEY] = st.session_state.pop(P2_STAGED_LAT_KEY)
+        st.session_state[P2_LON_KEY] = st.session_state.pop(P2_STAGED_LON_KEY)
     _render_coordinate_inputs()
+    _render_folium_map()
+    _render_image_capture_settings()
     _render_fetch_and_describe()
     _render_risk_assessment()
 
 
 def render_page1() -> None:
     """Render Page 1: interactive world-map dashboard."""
-    st.title("🌍 Project Okavango: Interactive Dashboard")
-
     dataset_to_metric: Dict[str, str] = {
         "Annual change in forest area": "net_change_forest_area",
         "Annual deforestation": "_1d_deforestation",
@@ -699,6 +799,13 @@ def render_page1() -> None:
     init_session_state(all_regions=[])
     clear_country_if_filtered_out(gdf_year)
 
+    set_kpis = compute_set_kpis(gdf_year, metric_col)
+    if set_kpis is None:
+        st.error("No KPI data available for current filters.")
+        st.stop()
+
+    _render_kpis_above_map(gdf_year, country_col, metric_col, set_kpis)
+
     st.subheader("World Map (click a country)")
     map_fig = build_map(gdf_year, country_col, metric_col, dataset_name)
     selection_event = st.plotly_chart(
@@ -713,20 +820,143 @@ def render_page1() -> None:
     if st.button("Clear country", key=BTN_CLEAR_COUNTRY_KEY):
         st.session_state[COUNTRY_STATE_KEY] = None
 
-    set_kpis = compute_set_kpis(gdf_year, metric_col)
-    if set_kpis is None:
-        st.error("No KPI data available for current filters.")
-        st.stop()
+    render_top_bottom_charts(gdf_year, country_col, metric_col)
 
-    render_set_kpis(set_kpis)
-    _render_country_or_charts(gdf_year, country_col, metric_col)
+
+_FONT_LINK = (
+    '<link rel="preconnect" href="https://fonts.googleapis.com">'
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+    '<link href="https://fonts.googleapis.com/css2?'
+    "family=Barlow+Condensed:wght@400;600;700;800"
+    '&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">'
+)
+
+
+def _inject_css() -> None:
+    """Inject global custom CSS for a polished, green-themed UI."""
+    st.markdown(_FONT_LINK, unsafe_allow_html=True)
+    st.markdown(
+        """<style>
+        html,body,[class*="css"],.stApp,.stMarkdown,.stMarkdown p,
+        button,input,select,label,textarea,
+        [data-testid="stText"],[data-testid="stCaptionContainer"]
+        { font-family:'Barlow',sans-serif !important; }
+        h1,h2,h3,h4,h5,h6,.stMarkdown h1,.stMarkdown h2,
+        .stMarkdown h3,.stMarkdown h4
+        { font-family:'Barlow Condensed',sans-serif !important;
+          font-weight:800 !important; letter-spacing:0.5px !important;
+          text-transform:uppercase !important; }
+        .stApp,[data-testid="stAppViewContainer"],
+        [data-testid="stMain"],[data-testid="block-container"]
+        { background-color:#0d2e2a !important; color:#ffffff !important; }
+        [data-testid="stHeader"] { background-color:#0d2e2a !important; }
+        html,body { overflow-x:hidden !important; }
+        [data-testid="stAppViewContainer"],[data-testid="stMain"]
+        { overflow-x:hidden !important; max-width:100vw !important; }
+        [data-testid="block-container"]
+        { max-width:1100px !important; padding-left:2.5rem !important;
+          padding-right:2.5rem !important;
+          margin-left:auto !important; margin-right:auto !important; }
+        h1,h2,h3,h4,h5,h6,p,label,span,.stMarkdown,.stMarkdown p
+        { color:#ffffff !important; }
+        .stCaption,[data-testid="stCaptionContainer"] p
+        { color:#7fbfb0 !important; }
+        section[data-testid="stSidebar"] { display:none !important; }
+        .nav-btn button { border-radius:24px !important;
+          font-weight:700 !important; font-size:0.95rem !important;
+          transition:transform 0.1s ease,opacity 0.1s ease; }
+        .nav-btn button:hover { transform:scale(1.04); }
+        .stButton button[kind="primary"]
+        { background-color:#3ecb8a !important; color:#0d2e2a !important;
+          border:none !important; }
+        .stButton button[kind="secondary"]
+        { background-color:transparent !important; color:#3ecb8a !important;
+          border:1.5px solid #3ecb8a !important; }
+        .stButton button[kind="tertiary"]
+        { color:#7fbfb0 !important; border:1px solid #1e4d42 !important; }
+        .stSelectbox>div>div,.stNumberInput>div>div>input,
+        .stSlider [data-testid="stSlider"]
+        { background-color:#0a2420 !important; color:#ffffff !important;
+          border:1px solid #1e4d42 !important; border-radius:8px !important; }
+        .stMultiSelect>div
+        { background-color:#0a2420 !important;
+          border:1px solid #1e4d42 !important; }
+        div[data-testid="metric-container"]
+        { background:#0a2420 !important; border:1px solid #1e4d42 !important;
+          border-radius:12px !important; padding:0.9rem 1rem !important; }
+        [data-testid="stMetricValue"] { color:#ffffff !important; }
+        [data-testid="stMetricLabel"] p { color:#7fbfb0 !important; }
+        hr { border-color:#1e4d42 !important; margin:0.5rem 0 1rem 0; }
+        [data-testid="stAlert"] { border-radius:10px !important; }
+        </style>""",
+        unsafe_allow_html=True,
+    )
+
+
+def _render_header() -> None:
+    """Render the project banner at the top of every page."""
+    st.markdown(
+        """
+        <div style="padding:1.2rem 0 0.6rem 0;">
+          <h1 style="color:#ffffff;margin:0;
+                     font-family:'Barlow Condensed',sans-serif;
+                     font-size:2.6rem;font-weight:800;
+                     letter-spacing:2px;text-transform:uppercase;
+                     line-height:1.1;">
+            Project Okavango
+          </h1>
+          <p style="color:#7fbfb0;margin:0.3rem 0 0.7rem 0;
+                    font-family:'Barlow',sans-serif;font-size:0.88rem;
+                    letter-spacing:0.5px;text-transform:uppercase;">
+            Environmental Intelligence &amp; AI Risk Detection
+          </p>
+          <div style="height:2px;background:#3ecb8a;
+                      width:60px;border-radius:2px;"></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_nav(page: str) -> None:
+    """Render top navigation buttons and a divider."""
+    c1, c2, _ = st.columns([1, 1, 5])
+    with c1:
+        st.markdown('<div class="nav-btn">', unsafe_allow_html=True)
+        if st.button(
+            PAGE_MAP,
+            use_container_width=True,
+            type="primary" if page == PAGE_MAP else "secondary",
+        ):
+            st.session_state[PAGE_KEY] = PAGE_MAP
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+    with c2:
+        st.markdown('<div class="nav-btn">', unsafe_allow_html=True)
+        if st.button(
+            PAGE_AI,
+            use_container_width=True,
+            type="primary" if page == PAGE_AI else "secondary",
+        ):
+            st.session_state[PAGE_KEY] = PAGE_AI
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+    st.divider()
 
 
 def main() -> None:
     """Run the Streamlit dashboard."""
-    st.set_page_config(page_title="Project Okavango", layout="wide")
-    page = st.sidebar.radio("Navigation", [PAGE_MAP, PAGE_AI])
-    if page == PAGE_AI:
+    st.set_page_config(
+        page_title="Project Okavango",
+        page_icon="O",
+        layout="wide",
+    )
+    _inject_css()
+    if PAGE_KEY not in st.session_state:
+        st.session_state[PAGE_KEY] = PAGE_MAP
+    _render_header()
+    _render_nav(st.session_state[PAGE_KEY])
+    if st.session_state[PAGE_KEY] == PAGE_AI:
         render_page2()
     else:
         render_page1()
