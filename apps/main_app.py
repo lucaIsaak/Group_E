@@ -454,75 +454,102 @@ def _render_country_or_charts(
 
 def render_page2() -> None:
     """Render Page 2: coordinate selection for the AI satellite-imagery workflow."""
+    import folium
+    from streamlit_folium import st_folium
+
     st.title("🤖 AI Workflow: Environmental Risk Detection")
     st.markdown(
-        "Select an area of interest. "
-        "The app will fetch satellite imagery and analyse environmental risk."
+        "Click anywhere on the satellite map to select an area of interest, "
+        "or enter coordinates manually below."
     )
 
+    # Initialise coordinate state on first load
+    if P2_LAT_KEY not in st.session_state:
+        st.session_state[P2_LAT_KEY] = 0.0
+    if P2_LON_KEY not in st.session_state:
+        st.session_state[P2_LON_KEY] = 0.0
+    if P2_ZOOM_KEY not in st.session_state:
+        st.session_state[P2_ZOOM_KEY] = 12
+
+    # ---- Interactive satellite map ----
+    st.subheader("Location Preview")
+    st.caption("Click on the map to set coordinates.")
+
+    _lat = st.session_state[P2_LAT_KEY]
+    _lon = st.session_state[P2_LON_KEY]
+
+    m = folium.Map(
+        location=[_lat, _lon],
+        zoom_start=3,
+        tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        attr="Esri World Imagery",
+        max_zoom=18,
+    )
+    folium.Marker(
+        location=[_lat, _lon],
+        tooltip=f"{_lat:.4f}, {_lon:.4f}",
+        icon=folium.Icon(color="red", icon="map-marker"),
+    ).add_to(m)
+
+    map_data = st_folium(m, height=450, use_container_width=True, returned_objects=["last_clicked"])
+
+    # Update coordinates from map click
+    if map_data and map_data.get("last_clicked"):
+        new_lat = round(map_data["last_clicked"]["lat"], 4)
+        new_lon = round(map_data["last_clicked"]["lng"], 4)
+        if new_lat != st.session_state[P2_LAT_KEY] or new_lon != st.session_state[P2_LON_KEY]:
+            st.session_state[P2_LAT_KEY] = new_lat
+            st.session_state[P2_LON_KEY] = new_lon
+            st.rerun()
+
+    # ---- Manual coordinate inputs ----
     st.subheader("Coordinates & Zoom")
     col1, col2, col3 = st.columns(3)
     with col1:
-        latitude = st.number_input(
+        st.number_input(
             "Latitude",
             min_value=-90.0,
             max_value=90.0,
-            value=0.0,
             step=0.0001,
             format="%.4f",
             help="Decimal degrees — negative values are South.",
+            key=P2_LAT_KEY,
         )
     with col2:
-        longitude = st.number_input(
+        st.number_input(
             "Longitude",
             min_value=-180.0,
             max_value=180.0,
-            value=0.0,
             step=0.0001,
             format="%.4f",
             help="Decimal degrees — negative values are West.",
+            key=P2_LON_KEY,
         )
     with col3:
-        zoom = st.slider(
+        st.slider(
             "Zoom level",
             min_value=1,
             max_value=18,
-            value=12,
             help="Higher zoom = more detail, smaller area covered.",
+            key=P2_ZOOM_KEY,
         )
-
-    image_size = st.select_slider(
+    if P2_SIZE_KEY not in st.session_state:
+        st.session_state[P2_SIZE_KEY] = "512 px"
+    st.select_slider(
         "Image resolution",
         options=["256 px", "512 px", "1024 px"],
-        value="512 px",
         help="Width and height of the satellite image to download.",
+        key=P2_SIZE_KEY,
     )
-
-    st.subheader("Location Preview")
-    preview_df = pd.DataFrame(
-        {"lat": [latitude], "lon": [longitude], "label": ["Selected area"]}
-    )
-    fig_preview = px.scatter_geo(
-        preview_df,
-        lat="lat",
-        lon="lon",
-        hover_name="label",
-        projection="natural earth",
-    )
-    fig_preview.update_traces(marker={"size": 15, "color": "red"})
-    fig_preview.update_layout(
-        height=350, margin={"l": 0, "r": 0, "t": 0, "b": 0}
-    )
-    st.plotly_chart(fig_preview, use_container_width=True)
-
-    st.session_state[P2_LAT_KEY] = latitude
-    st.session_state[P2_LON_KEY] = longitude
-    st.session_state[P2_ZOOM_KEY] = zoom
-    st.session_state[P2_SIZE_KEY] = image_size
 
     if st.button("🔍 Fetch Satellite Image", type="primary"):
-        size_px = int(image_size.split()[0])
-        cached = find_existing_run(latitude, longitude, zoom, size_px)
+        size_px = int(st.session_state[P2_SIZE_KEY].split()[0])
+        cached = find_existing_run(
+            st.session_state[P2_LAT_KEY],
+            st.session_state[P2_LON_KEY],
+            st.session_state[P2_ZOOM_KEY],
+            size_px,
+        )
         if cached:
             st.info("Loaded from cache — skipping pipeline to save compute.")
             st.session_state[P2_IMAGE_PATH_KEY] = cached["image_path"]
@@ -532,7 +559,12 @@ def render_page2() -> None:
         else:
             with st.spinner("Downloading satellite imagery…"):
                 try:
-                    img_path = fetch_satellite_image(latitude, longitude, zoom, size_px)
+                    img_path = fetch_satellite_image(
+                        st.session_state[P2_LAT_KEY],
+                        st.session_state[P2_LON_KEY],
+                        st.session_state[P2_ZOOM_KEY],
+                        size_px,
+                    )
                     st.session_state[P2_IMAGE_PATH_KEY] = str(img_path)
                     st.session_state.pop(P2_DESCRIPTION_KEY, None)
                     st.session_state.pop(P2_RISK_ASSESSMENT_KEY, None)
@@ -555,6 +587,19 @@ def render_page2() -> None:
                 st.caption("Click the button below to generate an AI description.")
 
             if st.button("🤖 Analyse with AI", type="secondary"):
+                size_px = int(st.session_state[P2_SIZE_KEY].split()[0])
+                cached = find_existing_run(
+                    st.session_state[P2_LAT_KEY],
+                    st.session_state[P2_LON_KEY],
+                    st.session_state[P2_ZOOM_KEY],
+                    size_px,
+                )
+                if cached:
+                    st.info("Loaded from cache — skipping pipeline to save compute.")
+                    st.session_state[P2_DESCRIPTION_KEY] = cached["image_description"]
+                    st.session_state[P2_RISK_ASSESSMENT_KEY] = cached["text_description"]
+                    st.session_state[P2_RISK_VERDICT_KEY] = cached["danger"]
+                    st.rerun()
                 img_path = Path(st.session_state[P2_IMAGE_PATH_KEY])
                 with st.spinner("Pulling model if needed and analysing image… this may take a minute."):
                     try:
