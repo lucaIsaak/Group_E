@@ -67,6 +67,7 @@ PAGE_AI = "🤖 AI Workflow"
 P2_LAT_KEY = "p2_latitude"
 P2_LON_KEY = "p2_longitude"
 P2_ZOOM_KEY = "p2_zoom"
+P2_LAST_CLICK_KEY = "p2_last_click"      # last click already processed, to ignore stale repeats
 P2_SIZE_KEY = "p2_image_size"
 P2_IMAGE_PATH_KEY = "p2_image_path"
 P2_DESCRIPTION_KEY = "p2_description"
@@ -469,38 +470,65 @@ def render_page2() -> None:
     if P2_LON_KEY not in st.session_state:
         st.session_state[P2_LON_KEY] = 0.0
     if P2_ZOOM_KEY not in st.session_state:
-        st.session_state[P2_ZOOM_KEY] = 12
+        st.session_state[P2_ZOOM_KEY] = 3
 
     # ---- Interactive satellite map ----
     st.subheader("Location Preview")
-    st.caption("Click on the map to set coordinates.")
+    st.caption("Click on the map to set coordinates. Use the zoom slider below to change zoom level.")
 
     _lat = st.session_state[P2_LAT_KEY]
     _lon = st.session_state[P2_LON_KEY]
+    _zoom = st.session_state[P2_ZOOM_KEY]
 
+    # Fixed base map — location/zoom_start are NEVER changed between reruns so
+    # the component's internal key (a hash of the leaflet JS) stays constant.
+    # This prevents the component from re-mounting, which is what was causing
+    # zoom to reset whenever the pin moved.
     m = folium.Map(
-        location=[_lat, _lon],
-        zoom_start=3,
+        location=[0, 0],
+        zoom_start=2,
         tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         attr="Esri World Imagery",
         max_zoom=18,
     )
+
+    # Marker lives in a FeatureGroup so it can be updated dynamically
+    # without affecting the map's JS hash.
+    fg = folium.FeatureGroup(name="pin")
     folium.Marker(
         location=[_lat, _lon],
         tooltip=f"{_lat:.4f}, {_lon:.4f}",
         icon=folium.Icon(color="red", icon="map-marker"),
-    ).add_to(m)
+    ).add_to(fg)
 
-    map_data = st_folium(m, height=450, use_container_width=True, returned_objects=["last_clicked"])
+    # center= and zoom= update the view dynamically without re-mounting the
+    # component, so pin changes never reset zoom and zoom changes never reset
+    # the pin.
+    map_data = st_folium(
+        m,
+        height=450,
+        use_container_width=True,
+        returned_objects=["last_clicked"],
+        center=[_lat, _lon],
+        zoom=_zoom,
+        feature_group_to_add=fg,
+    )
 
-    # Update coordinates from map click
     if map_data and map_data.get("last_clicked"):
         new_lat = round(map_data["last_clicked"]["lat"], 4)
         new_lon = round(map_data["last_clicked"]["lng"], 4)
-        if new_lat != st.session_state[P2_LAT_KEY] or new_lon != st.session_state[P2_LON_KEY]:
+        new_click = (new_lat, new_lon)
+        if new_click != st.session_state.get(P2_LAST_CLICK_KEY):
+            st.session_state[P2_LAST_CLICK_KEY] = new_click
             st.session_state[P2_LAT_KEY] = new_lat
             st.session_state[P2_LON_KEY] = new_lon
             st.rerun()
+
+    if st.button("Reset pin", type="tertiary"):
+        st.session_state[P2_LAT_KEY] = 0.0
+        st.session_state[P2_LON_KEY] = 0.0
+        st.session_state.pop(P2_LAST_CLICK_KEY, None)
+        st.rerun()
 
     # ---- Manual coordinate inputs ----
     st.subheader("Coordinates & Zoom")
