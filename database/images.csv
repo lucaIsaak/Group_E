@@ -311,3 +311,259 @@ Q4: Are there any areas of sensitive ecosystems or habitats present in the image
 
 OVERALL VERDICT: AT RISK
 SUMMARY: The airport's high levels of human activity and potential for pollution or contamination from aircraft operations and infrastructure pose an environmental risk.",AT RISK
+2026-03-11T18:07:21+00:00,-2.4602,23.3034,12,512,/Users/rubenvetter/Desktop/ADPRO_GROUP_E/Group_E/images/sat_-2.4602_23.3034_z12_512px.png,llava,"You are analysing a satellite image. Describe in detail what you see: terrain type, vegetation, water bodies, urban structures, and any other notable features. Be specific and concise.
+"," The image is a satellite view of a landscape. The terrain appears to be a mix of forested areas and open land, with the forested areas having a dense canopy. There are no visible water bodies or urban structures. The vegetation is lush and green, indicating a healthy ecosystem. The open land areas are less dense and have a more sparse vegetation cover. The image does not provide enough detail to confidently identify any specific types of terrain or urban structures. The water bodies are not clearly distinguishable due to the resolution of the satellite image. The image is a standard satellite photograph with a clear sky background and a focus on the land below. ",llama3.2,"You are an environmental risk assessment expert reviewing a satellite image description.
+
+Satellite image description:
+ The image is a satellite view of a landscape. The terrain appears to be a mix of forested areas and open land, with the forested areas having a dense canopy. There are no visible water bodies or urban structures. The vegetation is lush and green, indicating a healthy ecosystem. The open land areas are less dense and have a more sparse vegetation cover. The image does not provide enough detail to confidently identify any specific types of terrain or urban structures. The water bodies are not clearly distinguishable due to the resolution of the satellite image. The image is a standard satellite photograph with a clear sky background and a focus on the land below. 
+
+Task: Identify the most relevant environmental risk questions for this specific area,
+then answer each one based solely on the description above.
+Finally, give an overall verdict.
+
+Format your response EXACTLY like this (include all headers):
+Q1: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q2: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q3: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+(add up to 2 more questions if clearly relevant)
+
+OVERALL VERDICT: [AT RISK / NOT AT RISK / UNCERTAIN]
+SUMMARY: [one or two sentences explaining the overall verdict]
+","Q1: Are there any visible signs of deforestation or land degradation in the image? → UNCERTAIN: The description does not provide enough detail to confidently identify any signs of deforestation or land degradation.
+
+Q2: Is there any indication of soil erosion or sedimentation in the open land areas? → UNCERTAIN: The description does not provide enough detail to confidently identify any signs of soil erosion or sedimentation.
+
+Q3: Are there any visible signs of pollution or contamination in the image? → NO: There is no mention of pollution or contamination in the description.
+
+Q4: Is the ecosystem in the image considered healthy and balanced? → YES: The description states that the vegetation is lush and green, indicating a healthy ecosystem.
+
+Q5: Are there any potential sources of habitat disruption or fragmentation in the image? → UNCERTAIN: The description does not provide enough detail to confidently identify any potential sources of habitat disruption or fragmentation.
+
+OVERALL VERDICT: NOT AT RISK
+SUMMARY: The satellite image does not provide enough detail to identify any significant environmental risks or concerns, but the healthy ecosystem and lack of visible pollution suggest that the area is currently not at risk.",NOT AT RISK
+2026-03-11T18:12:29+00:00,-2.4602,23.3034,16,1024,/Users/rubenvetter/Desktop/ADPRO_GROUP_E/Group_E/images/sat_-2.4602_23.3034_z16_1024px.png,llava,"You are analysing a satellite image. Describe in detail what you see: terrain type, vegetation, water bodies, urban structures, and any other notable features. Be specific and concise.
+"," The image is a satellite view of a landscape, predominantly covered with dense vegetation. The terrain appears to be a mix of forested areas with varying shades of green, indicating different types of vegetation, and patches of bare earth, possibly indicating areas of deforestation or clearance. There are no visible water bodies or urban structures. The image is taken from a high angle, providing a broad view of the landscape. The vegetation is dense, with a pattern that suggests a natural, undisturbed environment. There are no distinct features that stand out as landmarks or points of interest. The image does not provide any information about the specific location or region. ",llama3.2,"You are an environmental risk assessment expert reviewing a satellite image description.
+
+Satellite image description:
+ The image is a satellite view of a landscape, predominantly covered with dense vegetation. The terrain appears to be a mix of forested areas with varying shades of green, indicating different types of vegetation, and patches of bare earth, possibly indicating areas of deforestation or clearance. There are no visible water bodies or urban structures. The image is taken from a high angle, providing a broad view of the landscape. The vegetation is dense, with a pattern that suggests a natural, undisturbed environment. There are no distinct features that stand out as landmarks or points of interest. The image does not provide any information about the specific location or region. 
+
+Task: Identify the most relevant environmental risk questions for this specific area,
+then answer each one based solely on the description above.
+Finally, give an overall verdict.
+
+Format your response EXACTLY like this (include all headers):
+Q1: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q2: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q3: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+(add up to 2 more questions if clearly relevant)
+
+OVERALL VERDICT: [AT RISK / NOT AT RISK / UNCERTAIN]
+SUMMARY: [one or two sentences explaining the overall verdict]
+","Q1: Is the area likely to be experiencing soil erosion due to deforestation or clearance? → YES: The presence of patches of bare earth suggests areas of deforestation or clearance, which can lead to soil erosion.
+
+Q2: Is the area likely to be experiencing water pollution due to agricultural or industrial activities? → NO: There are no visible water bodies, and the image does not provide any information about human activities that could lead to water pollution.
+
+Q3: Is the area likely to be experiencing habitat loss or fragmentation due to human activities? → YES: The dense vegetation and natural pattern suggest a natural, undisturbed environment, but the presence of patches of bare earth and the lack of distinct features as landmarks or points of interest may indicate some level of disturbance or fragmentation.
+
+Q4: Is the area likely to be experiencing climate change impacts, such as changes in temperature or precipitation patterns? → NO: There is no information provided about climate change impacts, and the image does not suggest any changes in the environment that could be attributed to climate change.
+
+OVERALL VERDICT: AT RISK
+SUMMARY: The area appears to be at risk due to deforestation or clearance, which could lead to soil erosion and potentially disrupt the natural habitat. However, the lack of information about human activities, water bodies, or climate change impacts makes it difficult to assess the full extent of the environmental risks.",AT RISK
+2026-03-11T21:33:08+00:00,44.5,59.9,8,512,/Users/rubenvetter/Desktop/ADPRO_GROUP_E/Group_E/images/sat_44.5000_59.9000_z8_512px.png,llava,"You are analysing a satellite image. Describe in detail what you see: terrain type, vegetation, water bodies, urban structures, and any other notable features. Be specific and concise.
+"," The image is a satellite view of a desert landscape with a large body of water in the center. The terrain is predominantly flat and arid, with sparse vegetation scattered across the surface. The water body appears to be a salt lake, with a distinct greenish hue, possibly due to algae or mineral deposits. There are no urban structures or significant signs of human activity visible in the image. The surrounding area is mostly barren, with a few small patches of vegetation here and there. The image does not provide any information about the presence of wildlife or the specific location. The overall impression is of a remote, natural environment with minimal human intervention. ",llama3.2,"You are an environmental risk assessment expert reviewing a satellite image description.
+
+Satellite image description:
+ The image is a satellite view of a desert landscape with a large body of water in the center. The terrain is predominantly flat and arid, with sparse vegetation scattered across the surface. The water body appears to be a salt lake, with a distinct greenish hue, possibly due to algae or mineral deposits. There are no urban structures or significant signs of human activity visible in the image. The surrounding area is mostly barren, with a few small patches of vegetation here and there. The image does not provide any information about the presence of wildlife or the specific location. The overall impression is of a remote, natural environment with minimal human intervention. 
+
+Task: Identify the most relevant environmental risk questions for this specific area,
+then answer each one based solely on the description above.
+Finally, give an overall verdict.
+
+Format your response EXACTLY like this (include all headers):
+Q1: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q2: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q3: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+(add up to 2 more questions if clearly relevant)
+
+OVERALL VERDICT: [AT RISK / NOT AT RISK / UNCERTAIN]
+SUMMARY: [one or two sentences explaining the overall verdict]
+","Q1: Is there any indication of potential water pollution or contamination in the salt lake? → UNCERTAIN: The description does not provide information about the lake's water quality or any potential sources of pollution.
+
+Q2: Are there any signs of erosion or sedimentation in the surrounding area? → NO: The description does not mention any visible signs of erosion or sedimentation.
+
+Q3: Is there any potential for wildfires in the area due to the presence of vegetation? → YES: The presence of sparse vegetation scattered across the surface suggests a potential risk of wildfires, especially in a dry and arid environment.
+
+Q4: Are there any signs of climate change impacts, such as changes in vegetation patterns or water levels? → UNCERTAIN: The description does not provide any information about changes in vegetation patterns or water levels, but it is unclear if these factors are relevant to the specific location.
+
+OVERALL VERDICT: NOT AT RISK
+SUMMARY: While there are some potential environmental risks identified, such as the risk of wildfires and the uncertainty surrounding water pollution, the overall assessment is that the area is not currently at risk due to the lack of visible signs of human activity or environmental degradation.",NOT AT RISK
+2026-03-11T21:34:25+00:00,44.5,59.9,8,1024,/Users/rubenvetter/Desktop/ADPRO_GROUP_E/Group_E/images/sat_44.5000_59.9000_z8_1024px.png,llava,"You are analysing a satellite image. Describe in detail what you see: terrain type, vegetation, water bodies, urban structures, and any other notable features. Be specific and concise.
+"," The image is a satellite view of a desert landscape. The terrain is predominantly flat with a mix of sandy areas and patches of vegetation, primarily green shrubs. There are several water bodies, including a large body of water in the center, which appears to be a lake or a large pond. To the left of this central body of water, there is a smaller, irregularly shaped water body. There are no urban structures visible in the image, and the surrounding area is mostly barren with no significant vegetation or structures. The overall color palette of the image is dominated by shades of brown and green, with the water bodies providing a stark contrast. ",llama3.2,"You are an environmental risk assessment expert reviewing a satellite image description.
+
+Satellite image description:
+ The image is a satellite view of a desert landscape. The terrain is predominantly flat with a mix of sandy areas and patches of vegetation, primarily green shrubs. There are several water bodies, including a large body of water in the center, which appears to be a lake or a large pond. To the left of this central body of water, there is a smaller, irregularly shaped water body. There are no urban structures visible in the image, and the surrounding area is mostly barren with no significant vegetation or structures. The overall color palette of the image is dominated by shades of brown and green, with the water bodies providing a stark contrast. 
+
+Task: Identify the most relevant environmental risk questions for this specific area,
+then answer each one based solely on the description above.
+Finally, give an overall verdict.
+
+Format your response EXACTLY like this (include all headers):
+Q1: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q2: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q3: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+(add up to 2 more questions if clearly relevant)
+
+OVERALL VERDICT: [AT RISK / NOT AT RISK / UNCERTAIN]
+SUMMARY: [one or two sentences explaining the overall verdict]
+","Q1: Is there any indication of water pollution in the satellite image? → UNCERTAIN: The description does not provide information on water pollution, and the presence of a lake or pond does not necessarily imply pollution.
+
+Q2: Are there any visible signs of soil erosion or degradation? → YES: The description mentions a desert landscape with a mix of sandy areas and patches of vegetation, which could indicate soil erosion or degradation.
+
+Q3: Is there any evidence of habitat destruction or fragmentation? → YES: The presence of a large body of water in the center and a smaller, irregularly shaped water body to the left could indicate habitat destruction or fragmentation, particularly if the surrounding area is mostly barren.
+
+Q4: Are there any visible signs of climate change impacts, such as changes in vegetation patterns or increased frequency of wildfires? → UNCERTAIN: The description does not provide information on climate change impacts, and the presence of green shrubs and a lake or pond does not necessarily imply climate change.
+
+OVERALL VERDICT: AT RISK
+SUMMARY: The satellite image suggests that the desert landscape is at risk due to potential soil erosion, habitat destruction, and fragmentation, with some uncertainty regarding climate change impacts.",AT RISK
+2026-03-11T21:40:53+00:00,22.0,89.5,11,1024,/Users/rubenvetter/Desktop/ADPRO_GROUP_E/Group_E/images/sat_22.0000_89.5000_z11_1024px.png,llava,"You are analysing a satellite image. Describe in detail what you see: terrain type, vegetation, water bodies, urban structures, and any other notable features. Be specific and concise.
+"," The image shows a satellite view of a landscape with a complex network of rivers and waterways. The terrain is a mix of forested areas and water bodies, with the rivers appearing to be meandering and forming a series of loops and curves. The vegetation is dense and green, indicating a healthy ecosystem. There are no urban structures or buildings visible in the image. The water bodies are a prominent feature, with the rivers appearing to be the main waterways in the area. The overall landscape suggests a natural, possibly tropical environment with a rich water system. ",llama3.2,"You are an environmental risk assessment expert reviewing a satellite image description.
+
+Satellite image description:
+ The image shows a satellite view of a landscape with a complex network of rivers and waterways. The terrain is a mix of forested areas and water bodies, with the rivers appearing to be meandering and forming a series of loops and curves. The vegetation is dense and green, indicating a healthy ecosystem. There are no urban structures or buildings visible in the image. The water bodies are a prominent feature, with the rivers appearing to be the main waterways in the area. The overall landscape suggests a natural, possibly tropical environment with a rich water system. 
+
+Task: Identify the most relevant environmental risk questions for this specific area,
+then answer each one based solely on the description above.
+Finally, give an overall verdict.
+
+Format your response EXACTLY like this (include all headers):
+Q1: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q2: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q3: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+(add up to 2 more questions if clearly relevant)
+
+OVERALL VERDICT: [AT RISK / NOT AT RISK / UNCERTAIN]
+SUMMARY: [one or two sentences explaining the overall verdict]
+","Q1: Is the area prone to flooding due to its complex network of rivers and waterways? → YES: The description mentions a ""complex network of rivers and waterways"" which could lead to increased risk of flooding.
+
+Q2: Is the ecosystem in the area vulnerable to changes in water levels or quality? → YES: The dense vegetation and healthy ecosystem suggest a sensitive environment that could be impacted by changes in water levels or quality.
+
+Q3: Are there any potential sources of pollution in the area, such as agricultural runoff or industrial activities? → NO: The description does not mention any urban structures or buildings, and the overall landscape suggests a natural environment.
+
+Q4: Is the area susceptible to drought or water scarcity due to its tropical environment? → NO: The description does not provide information on the specific climate or weather patterns of the area, but the presence of a complex water system suggests a potentially stable water supply.
+
+OVERALL VERDICT: NOT AT RISK
+SUMMARY: While the area's complex network of rivers and waterways suggest some environmental risks, the overall description does not indicate any significant threats to the ecosystem or water quality.",NOT AT RISK
+2026-03-11T21:43:29+00:00,57.0,-111.5,11,1024,/Users/rubenvetter/Desktop/ADPRO_GROUP_E/Group_E/images/sat_57.0000_-111.5000_z11_1024px.png,llava,"You are analysing a satellite image. Describe in detail what you see: terrain type, vegetation, water bodies, urban structures, and any other notable features. Be specific and concise.
+"," The image is a satellite view of a landscape, which appears to be a mix of natural and human-made elements. The terrain is a blend of forested areas and open land, with the forested areas showing a dense canopy of green, indicating a healthy, lush environment. There are several water bodies visible, including a large body of water that could be a lake or river, and smaller bodies of water scattered throughout the landscape.
+
+Urban structures are present in the form of a grid-like pattern of roads and buildings, suggesting a planned urban area. The roads are laid out in a systematic manner, with clear demarcations between different sections of the urban area.
+
+There are also several industrial structures visible, including what appears to be a large industrial facility with multiple buildings and structures. These facilities are likely related to mining or processing, as indicated by the presence of large piles of material and the industrial layout.
+
+The landscape is dotted with various types of land use, including agricultural fields, which are identifiable by their uniform, rectangular shape and the absence of trees. There are also several open areas that could be used for mining or other industrial activities.
+
+The overall impression is of a region that is undergoing development, with a mix of natural and human-made elements. The presence of the industrial facility suggests that the area is likely rich in resources, possibly minerals or other raw materials. The urban area appears to be growing, with the roads and buildings indicating a planned expansion. The water bodies provide a natural element to the landscape, offering potential for recreational activities or supporting the local ecosystem. ",llama3.2,"You are an environmental risk assessment expert reviewing a satellite image description.
+
+Satellite image description:
+ The image is a satellite view of a landscape, which appears to be a mix of natural and human-made elements. The terrain is a blend of forested areas and open land, with the forested areas showing a dense canopy of green, indicating a healthy, lush environment. There are several water bodies visible, including a large body of water that could be a lake or river, and smaller bodies of water scattered throughout the landscape.
+
+Urban structures are present in the form of a grid-like pattern of roads and buildings, suggesting a planned urban area. The roads are laid out in a systematic manner, with clear demarcations between different sections of the urban area.
+
+There are also several industrial structures visible, including what appears to be a large industrial facility with multiple buildings and structures. These facilities are likely related to mining or processing, as indicated by the presence of large piles of material and the industrial layout.
+
+The landscape is dotted with various types of land use, including agricultural fields, which are identifiable by their uniform, rectangular shape and the absence of trees. There are also several open areas that could be used for mining or other industrial activities.
+
+The overall impression is of a region that is undergoing development, with a mix of natural and human-made elements. The presence of the industrial facility suggests that the area is likely rich in resources, possibly minerals or other raw materials. The urban area appears to be growing, with the roads and buildings indicating a planned expansion. The water bodies provide a natural element to the landscape, offering potential for recreational activities or supporting the local ecosystem. 
+
+Task: Identify the most relevant environmental risk questions for this specific area,
+then answer each one based solely on the description above.
+Finally, give an overall verdict.
+
+Format your response EXACTLY like this (include all headers):
+Q1: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q2: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q3: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+(add up to 2 more questions if clearly relevant)
+
+OVERALL VERDICT: [AT RISK / NOT AT RISK / UNCERTAIN]
+SUMMARY: [one or two sentences explaining the overall verdict]
+","Q1: Is the area likely to be prone to flooding due to the presence of water bodies? → YES: The presence of a large body of water that could be a lake or river, and smaller bodies of water scattered throughout the landscape, suggests that the area is at risk of flooding.
+
+Q2: Are there any signs of soil erosion or degradation in the landscape? → UNCERTAIN: There is no information in the description to suggest soil erosion or degradation, but the presence of industrial facilities and mining activities could potentially lead to soil disturbance.
+
+Q3: Is the urban area likely to be well-planned and managed, with adequate waste management and sewage systems? → NO: The description suggests that the urban area is growing, with roads and buildings indicating a planned expansion, but it does not provide information on the quality of waste management and sewage systems.
+
+Q4: Are there any potential environmental impacts associated with the industrial facility, such as air or water pollution? → YES: The presence of large piles of material and industrial structures suggests that the facility may be emitting pollutants or affecting the local water quality.
+
+OVERALL VERDICT: AT RISK
+SUMMARY: The area is at risk due to potential flooding, soil erosion, poor urban planning, and environmental impacts from the industrial facility.",AT RISK
+2026-03-11T21:51:15+00:00,57.0,-111.5,10,1024,/Users/rubenvetter/Desktop/ADPRO_GROUP_E/Group_E/images/sat_57.0000_-111.5000_z10_1024px.png,llava,"You are analysing a satellite image. Describe in detail what you see: terrain type, vegetation, water bodies, urban structures, and any other notable features. Be specific and concise.
+"," The image is a satellite view of a landscape, showcasing a mix of natural and human-made features. The terrain appears to be a blend of forested areas and open land, with a variety of vegetation, including what seems to be a dense canopy of trees in the lower right quadrant. There are also patches of bare land, possibly indicating deforestation or clearance for development.
+
+Several water bodies are visible, including a large body of water in the upper left quadrant, which could be a lake or a river. There are also smaller bodies of water scattered throughout the landscape.
+
+Urban structures are present in the form of a grid-like pattern of roads or pathways, with some buildings or structures visible, particularly in the lower right quadrant. These structures are surrounded by a mix of vegetation and open land, suggesting a rural or semi-rural setting.
+
+The image also shows a few notable features such as a large, open area in the lower left quadrant that could be a mining site or a large clearing, and a few smaller, circular structures that might be storage tanks or ponds. The overall impression is of a landscape that is undergoing development, with a balance of natural and human-made elements. ",llama3.2,"You are an environmental risk assessment expert reviewing a satellite image description.
+
+Satellite image description:
+ The image is a satellite view of a landscape, showcasing a mix of natural and human-made features. The terrain appears to be a blend of forested areas and open land, with a variety of vegetation, including what seems to be a dense canopy of trees in the lower right quadrant. There are also patches of bare land, possibly indicating deforestation or clearance for development.
+
+Several water bodies are visible, including a large body of water in the upper left quadrant, which could be a lake or a river. There are also smaller bodies of water scattered throughout the landscape.
+
+Urban structures are present in the form of a grid-like pattern of roads or pathways, with some buildings or structures visible, particularly in the lower right quadrant. These structures are surrounded by a mix of vegetation and open land, suggesting a rural or semi-rural setting.
+
+The image also shows a few notable features such as a large, open area in the lower left quadrant that could be a mining site or a large clearing, and a few smaller, circular structures that might be storage tanks or ponds. The overall impression is of a landscape that is undergoing development, with a balance of natural and human-made elements. 
+
+Task: Identify the most relevant environmental risk questions for this specific area,
+then answer each one based solely on the description above.
+Finally, give an overall verdict.
+
+Format your response EXACTLY like this (include all headers):
+Q1: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q2: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q3: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+(add up to 2 more questions if clearly relevant)
+
+OVERALL VERDICT: [AT RISK / NOT AT RISK / UNCERTAIN]
+SUMMARY: [one or two sentences explaining the overall verdict]
+","Q1: Is there a visible risk of deforestation or land degradation in the area? → YES: The presence of patches of bare land, possibly indicating deforestation or clearance for development, suggests a risk of land degradation.
+
+Q2: Are there any visible water bodies that could be contaminated or affected by human activities? → UNCERTAIN: While the description mentions several water bodies, it does not provide information on their current water quality or potential contamination sources.
+
+Q3: Are there any visible signs of mining or extractive activities in the area? → YES: The large, open area in the lower left quadrant could be a mining site or a large clearing, suggesting a potential risk of environmental contamination.
+
+Q4: Are there any visible signs of urban or industrial activities that could pose a risk to local ecosystems? → YES: The grid-like pattern of roads or pathways, buildings or structures, and storage tanks or ponds suggest a presence of urban or industrial activities that could impact local ecosystems.
+
+Q5: Is there a visible risk of flooding or water pollution in the area? → UNCERTAIN: While the description mentions several water bodies, it does not provide information on their current water levels, flow rates, or potential sources of pollution.
+
+OVERALL VERDICT: AT RISK
+SUMMARY: The area appears to be undergoing development, with visible signs of deforestation, mining, and urban or industrial activities that could pose risks to local ecosystems.",AT RISK
+2026-03-11T21:56:36+00:00,44.5,59.5,8,1024,/Users/rubenvetter/Desktop/ADPRO_GROUP_E/Group_E/images/sat_44.5000_59.5000_z8_1024px.png,llava,"You are analysing a satellite image. Describe in detail what you see: terrain type, vegetation, water bodies, urban structures, and any other notable features. Be specific and concise.
+"," The image is a satellite view of a desert landscape. The terrain is predominantly arid with sparse vegetation, primarily in the lower right corner. There are several water bodies scattered throughout the image, including a large body of water in the center and smaller bodies of water in the upper left and lower right corners. The water bodies appear to be lakes or oases. There are no urban structures visible in the image. The overall color palette is dominated by shades of brown and green, indicative of the desert environment and sparse vegetation. ",llama3.2,"You are an environmental risk assessment expert reviewing a satellite image description.
+
+Satellite image description:
+ The image is a satellite view of a desert landscape. The terrain is predominantly arid with sparse vegetation, primarily in the lower right corner. There are several water bodies scattered throughout the image, including a large body of water in the center and smaller bodies of water in the upper left and lower right corners. The water bodies appear to be lakes or oases. There are no urban structures visible in the image. The overall color palette is dominated by shades of brown and green, indicative of the desert environment and sparse vegetation. 
+
+Task: Identify the most relevant environmental risk questions for this specific area,
+then answer each one based solely on the description above.
+Finally, give an overall verdict.
+
+Format your response EXACTLY like this (include all headers):
+Q1: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q2: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q3: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+(add up to 2 more questions if clearly relevant)
+
+OVERALL VERDICT: [AT RISK / NOT AT RISK / UNCERTAIN]
+SUMMARY: [one or two sentences explaining the overall verdict]
+","Q1: What is the primary environmental risk associated with the presence of water bodies in the desert landscape? → YES: The presence of water bodies, such as lakes or oases, in a desert landscape increases the risk of water pollution, as runoff from these bodies can carry pollutants and nutrients into nearby water sources, potentially harming aquatic life.
+
+Q2: Is the risk of water pollution exacerbated by the presence of sparse vegetation in the lower right corner of the image? → YES: The sparse vegetation in the lower right corner may contribute to increased runoff and erosion, which can carry pollutants into water bodies, exacerbating the risk of water pollution.
+
+Q3: Are there any potential sources of pollution or contamination in the image that could pose an environmental risk? → NO: There is no information in the description to suggest any potential sources of pollution or contamination, such as industrial activities, agricultural runoff, or waste disposal.
+
+Q4: Is the risk of water scarcity or drought in the area indicated by the presence of water bodies? → YES: The presence of water bodies, such as lakes or oases, in a desert landscape suggests that the area may be experiencing or experiencing periodic water scarcity or drought, as these features are often formed in response to water availability.
+
+OVERALL VERDICT: AT RISK
+SUMMARY: The presence of water bodies in the desert landscape indicates a risk of water pollution and water scarcity or drought, highlighting the need for careful management and conservation of this valuable resource.",AT RISK
