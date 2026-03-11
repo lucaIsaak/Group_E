@@ -44,6 +44,8 @@ from ollama_analysis import (  # pylint: disable=wrong-import-position,import-er
     _RISK_PROMPT_TEMPLATE,
 )
 from db import log_run, find_existing_run  # pylint: disable=wrong-import-position,import-error,wrong-import-order
+import folium  # pylint: disable=wrong-import-position,import-error,wrong-import-order
+from streamlit_folium import st_folium  # pylint: disable=wrong-import-position,import-error,wrong-import-order
 
 # ---------------------------------------------------------------------
 # Constants
@@ -453,65 +455,42 @@ def _render_country_or_charts(
     render_top_bottom_charts(gdf_year, country_col, metric_col)
 
 
-def render_page2() -> None:
-    """Render Page 2: coordinate selection for the AI satellite-imagery workflow."""
-    import folium
-    from streamlit_folium import st_folium
+_ESRI_TILES = (
+    "https://server.arcgisonline.com/ArcGIS/rest/services/"
+    "World_Imagery/MapServer/tile/{z}/{y}/{x}"
+)
 
-    st.title("🤖 AI Workflow: Environmental Risk Detection")
-    st.markdown(
-        "Click anywhere on the satellite map to select an area of interest, "
-        "or enter coordinates manually below."
-    )
 
-    # Initialise coordinate state on first load
-    if P2_LAT_KEY not in st.session_state:
-        st.session_state[P2_LAT_KEY] = 0.0
-    if P2_LON_KEY not in st.session_state:
-        st.session_state[P2_LON_KEY] = 0.0
-    if P2_ZOOM_KEY not in st.session_state:
-        st.session_state[P2_ZOOM_KEY] = 3
+def _init_page2_state() -> None:
+    """Initialise Page 2 session-state keys on first load."""
+    defaults = {P2_LAT_KEY: 0.0, P2_LON_KEY: 0.0, P2_ZOOM_KEY: 12, P2_SIZE_KEY: "512 px"}
+    for key, val in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = val
 
-    # ---- Interactive satellite map ----
+
+def _render_folium_map() -> None:
+    """Render the interactive satellite map and update state on click."""
     st.subheader("Location Preview")
-    st.caption("Click on the map to set coordinates. Use the zoom slider below to change zoom level.")
+    st.caption("Click on the map to set coordinates. Zoom slider is below.")
 
-    _lat = st.session_state[P2_LAT_KEY]
-    _lon = st.session_state[P2_LON_KEY]
-    _zoom = st.session_state[P2_ZOOM_KEY]
+    lat = st.session_state[P2_LAT_KEY]
+    lon = st.session_state[P2_LON_KEY]
 
-    # Fixed base map — location/zoom_start are NEVER changed between reruns so
-    # the component's internal key (a hash of the leaflet JS) stays constant.
-    # This prevents the component from re-mounting, which is what was causing
-    # zoom to reset whenever the pin moved.
-    m = folium.Map(
-        location=[0, 0],
-        zoom_start=2,
-        tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        attr="Esri World Imagery",
-        max_zoom=18,
-    )
-
-    # Marker lives in a FeatureGroup so it can be updated dynamically
-    # without affecting the map's JS hash.
-    fg = folium.FeatureGroup(name="pin")
+    base_map = folium.Map(location=[0, 0], zoom_start=2, tiles=_ESRI_TILES,
+                          attr="Esri World Imagery", max_zoom=18)
+    pin_group = folium.FeatureGroup(name="pin")
     folium.Marker(
-        location=[_lat, _lon],
-        tooltip=f"{_lat:.4f}, {_lon:.4f}",
+        location=[lat, lon],
+        tooltip=f"{lat:.4f}, {lon:.4f}",
         icon=folium.Icon(color="red", icon="map-marker"),
-    ).add_to(fg)
+    ).add_to(pin_group)
 
-    # center= and zoom= update the view dynamically without re-mounting the
-    # component, so pin changes never reset zoom and zoom changes never reset
-    # the pin.
     map_data = st_folium(
-        m,
-        height=450,
-        use_container_width=True,
+        base_map, height=450, use_container_width=True,
         returned_objects=["last_clicked"],
-        center=[_lat, _lon],
-        zoom=_zoom,
-        feature_group_to_add=fg,
+        center=[lat, lon],
+        feature_group_to_add=pin_group,
     )
 
     if map_data and map_data.get("last_clicked"):
@@ -530,54 +509,37 @@ def render_page2() -> None:
         st.session_state.pop(P2_LAST_CLICK_KEY, None)
         st.rerun()
 
-    # ---- Manual coordinate inputs ----
+
+def _render_coordinate_inputs() -> None:
+    """Render manual lat/lon/zoom/size inputs."""
     st.subheader("Coordinates & Zoom")
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.number_input(
-            "Latitude",
-            min_value=-90.0,
-            max_value=90.0,
-            step=0.0001,
-            format="%.4f",
-            help="Decimal degrees — negative values are South.",
-            key=P2_LAT_KEY,
-        )
+        st.number_input("Latitude", min_value=-90.0, max_value=90.0,
+                        step=0.0001, format="%.4f",
+                        help="Decimal degrees — negative values are South.",
+                        key=P2_LAT_KEY)
     with col2:
-        st.number_input(
-            "Longitude",
-            min_value=-180.0,
-            max_value=180.0,
-            step=0.0001,
-            format="%.4f",
-            help="Decimal degrees — negative values are West.",
-            key=P2_LON_KEY,
-        )
+        st.number_input("Longitude", min_value=-180.0, max_value=180.0,
+                        step=0.0001, format="%.4f",
+                        help="Decimal degrees — negative values are West.",
+                        key=P2_LON_KEY)
     with col3:
-        st.slider(
-            "Zoom level",
-            min_value=1,
-            max_value=18,
-            help="Higher zoom = more detail, smaller area covered.",
-            key=P2_ZOOM_KEY,
-        )
-    if P2_SIZE_KEY not in st.session_state:
-        st.session_state[P2_SIZE_KEY] = "512 px"
-    st.select_slider(
-        "Image resolution",
-        options=["256 px", "512 px", "1024 px"],
-        help="Width and height of the satellite image to download.",
-        key=P2_SIZE_KEY,
-    )
+        st.slider("Zoom level", min_value=1, max_value=18,
+                  help="Higher zoom = more detail, smaller area covered.",
+                  key=P2_ZOOM_KEY)
+    st.select_slider("Image resolution", options=["256 px", "512 px", "1024 px"],
+                     help="Width and height of the satellite image to download.",
+                     key=P2_SIZE_KEY)
 
+
+def _render_fetch_and_describe() -> None:
+    """Render the fetch button, satellite image, and AI description."""
     if st.button("🔍 Fetch Satellite Image", type="primary"):
         size_px = int(st.session_state[P2_SIZE_KEY].split()[0])
-        cached = find_existing_run(
-            st.session_state[P2_LAT_KEY],
-            st.session_state[P2_LON_KEY],
-            st.session_state[P2_ZOOM_KEY],
-            size_px,
-        )
+        cached = find_existing_run(st.session_state[P2_LAT_KEY],
+                                   st.session_state[P2_LON_KEY],
+                                   st.session_state[P2_ZOOM_KEY], size_px)
         if cached:
             st.info("Loaded from cache — skipping pipeline to save compute.")
             st.session_state[P2_IMAGE_PATH_KEY] = cached["image_path"]
@@ -588,62 +550,53 @@ def render_page2() -> None:
             with st.spinner("Downloading satellite imagery…"):
                 try:
                     img_path = fetch_satellite_image(
-                        st.session_state[P2_LAT_KEY],
-                        st.session_state[P2_LON_KEY],
-                        st.session_state[P2_ZOOM_KEY],
-                        size_px,
-                    )
+                        st.session_state[P2_LAT_KEY], st.session_state[P2_LON_KEY],
+                        st.session_state[P2_ZOOM_KEY], size_px)
                     st.session_state[P2_IMAGE_PATH_KEY] = str(img_path)
-                    st.session_state.pop(P2_DESCRIPTION_KEY, None)
-                    st.session_state.pop(P2_RISK_ASSESSMENT_KEY, None)
-                    st.session_state.pop(P2_RISK_VERDICT_KEY, None)
+                    for key in (P2_DESCRIPTION_KEY, P2_RISK_ASSESSMENT_KEY, P2_RISK_VERDICT_KEY):
+                        st.session_state.pop(key, None)
                 except Exception as exc:  # pylint: disable=broad-except
                     st.error(f"Could not fetch satellite image: {exc}")
 
-    if st.session_state.get(P2_IMAGE_PATH_KEY):
-        st.subheader("Satellite Image & AI Analysis")
-        img_col, desc_col = st.columns(2)
+    if not st.session_state.get(P2_IMAGE_PATH_KEY):
+        return
 
-        with img_col:
-            st.image(st.session_state[P2_IMAGE_PATH_KEY], use_container_width=True)
+    st.subheader("Satellite Image & AI Analysis")
+    img_col, desc_col = st.columns(2)
+    with img_col:
+        st.image(st.session_state[P2_IMAGE_PATH_KEY], use_container_width=True)
+    with desc_col:
+        st.markdown("**AI Description**")
+        if st.session_state.get(P2_DESCRIPTION_KEY):
+            st.markdown(st.session_state[P2_DESCRIPTION_KEY])
+        else:
+            st.caption("Click the button below to generate an AI description.")
 
-        with desc_col:
-            st.markdown("**AI Description**")
-            if st.session_state.get(P2_DESCRIPTION_KEY):
-                st.markdown(st.session_state[P2_DESCRIPTION_KEY])
-            else:
-                st.caption("Click the button below to generate an AI description.")
+        if st.button("🤖 Analyse with AI", type="secondary"):
+            size_px = int(st.session_state[P2_SIZE_KEY].split()[0])
+            cached = find_existing_run(st.session_state[P2_LAT_KEY],
+                                       st.session_state[P2_LON_KEY],
+                                       st.session_state[P2_ZOOM_KEY], size_px)
+            if cached:
+                st.info("Loaded from cache — skipping pipeline to save compute.")
+                st.session_state[P2_DESCRIPTION_KEY] = cached["image_description"]
+                st.session_state[P2_RISK_ASSESSMENT_KEY] = cached["text_description"]
+                st.session_state[P2_RISK_VERDICT_KEY] = cached["danger"]
+                st.rerun()
+            img_path = Path(st.session_state[P2_IMAGE_PATH_KEY])
+            spinner_msg = "Pulling model if needed and analysing image… this may take a minute."
+            with st.spinner(spinner_msg):
+                try:
+                    full_description = st.write_stream(describe_satellite_image(img_path))
+                    st.session_state[P2_DESCRIPTION_KEY] = full_description
+                    for key in (P2_RISK_ASSESSMENT_KEY, P2_RISK_VERDICT_KEY):
+                        st.session_state.pop(key, None)
+                except Exception as exc:  # pylint: disable=broad-except
+                    st.error(f"AI analysis failed: {exc}")
 
-            if st.button("🤖 Analyse with AI", type="secondary"):
-                size_px = int(st.session_state[P2_SIZE_KEY].split()[0])
-                cached = find_existing_run(
-                    st.session_state[P2_LAT_KEY],
-                    st.session_state[P2_LON_KEY],
-                    st.session_state[P2_ZOOM_KEY],
-                    size_px,
-                )
-                if cached:
-                    st.info("Loaded from cache — skipping pipeline to save compute.")
-                    st.session_state[P2_DESCRIPTION_KEY] = cached["image_description"]
-                    st.session_state[P2_RISK_ASSESSMENT_KEY] = cached["text_description"]
-                    st.session_state[P2_RISK_VERDICT_KEY] = cached["danger"]
-                    st.rerun()
-                img_path = Path(st.session_state[P2_IMAGE_PATH_KEY])
-                with st.spinner("Pulling model if needed and analysing image… this may take a minute."):
-                    try:
-                        full_description = st.write_stream(
-                            describe_satellite_image(img_path)
-                        )
-                        st.session_state[P2_DESCRIPTION_KEY] = full_description
-                        st.session_state.pop(P2_RISK_ASSESSMENT_KEY, None)
-                        st.session_state.pop(P2_RISK_VERDICT_KEY, None)
-                    except Exception as exc:  # pylint: disable=broad-except
-                        st.error(f"AI analysis failed: {exc}")
 
-    # ------------------------------------------------------------------
-    # Environmental risk assessment — runs automatically once a
-    # description is available.
-    # ------------------------------------------------------------------
+def _render_risk_assessment() -> None:
+    """Render the environmental risk assessment section."""
     description = st.session_state.get(P2_DESCRIPTION_KEY)
     if st.session_state.get(P2_RISK_ASSESSMENT_KEY):
         st.subheader("🌿 Environmental Risk Assessment")
@@ -659,9 +612,7 @@ def render_page2() -> None:
         st.subheader("🌿 Environmental Risk Assessment")
         with st.spinner("Assessing environmental risk… this may take a moment."):
             try:
-                full_assessment = st.write_stream(
-                    assess_environmental_risk(description)
-                )
+                full_assessment = st.write_stream(assess_environmental_risk(description))
                 verdict = extract_risk_verdict(full_assessment)
                 st.session_state[P2_RISK_ASSESSMENT_KEY] = full_assessment
                 st.session_state[P2_RISK_VERDICT_KEY] = verdict
@@ -671,17 +622,28 @@ def render_page2() -> None:
                     zoom=st.session_state[P2_ZOOM_KEY],
                     image_size_px=int(st.session_state[P2_SIZE_KEY].split()[0]),
                     image_path=st.session_state[P2_IMAGE_PATH_KEY],
-                    image_model=VISION_MODEL,
-                    image_prompt=_PROMPT,
-                    image_description=description,
-                    text_model=TEXT_MODEL,
+                    image_model=VISION_MODEL, image_prompt=_PROMPT,
+                    image_description=description, text_model=TEXT_MODEL,
                     text_prompt=_RISK_PROMPT_TEMPLATE.format(description=description),
-                    text_description=full_assessment,
-                    danger=verdict,
+                    text_description=full_assessment, danger=verdict,
                 )
                 st.rerun()
             except Exception as exc:  # pylint: disable=broad-except
                 st.error(f"Risk assessment failed: {exc}")
+
+
+def render_page2() -> None:
+    """Render Page 2: coordinate selection for the AI satellite-imagery workflow."""
+    st.title("🤖 AI Workflow: Environmental Risk Detection")
+    st.markdown(
+        "Click anywhere on the satellite map to select an area of interest, "
+        "or enter coordinates manually below."
+    )
+    _init_page2_state()
+    _render_folium_map()
+    _render_coordinate_inputs()
+    _render_fetch_and_describe()
+    _render_risk_assessment()
 
 
 def render_page1() -> None:

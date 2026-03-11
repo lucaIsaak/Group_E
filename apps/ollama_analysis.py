@@ -17,7 +17,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Iterator
 
-import ollama
+import ollama  # pylint: disable=import-error
 import yaml
 
 # ---------------------------------------------------------------------------
@@ -53,7 +53,7 @@ def _model_is_available(model: str) -> bool:
     try:
         local_models = ollama.list()
         return any(m.model.startswith(model) for m in local_models.models)
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return False
 
 
@@ -124,7 +124,7 @@ def describe_satellite_image(
         if token:
             token_count += 1
             if token_count == 1:
-                print(f"[step 2/2] First token received — model is responding.")
+                print("[step 2/2] First token received — model is responding.")
             yield token
 
     print(f"[step 2/2] Description complete ({token_count} tokens, {time.time()-t0:.1f}s).")
@@ -171,7 +171,7 @@ def assess_environmental_risk(
         if token:
             token_count += 1
             if token_count == 1:
-                print(f"[step 2/2] First token received — model is responding.")
+                print("[step 2/2] First token received — model is responding.")
             yield token
 
     print(f"[step 2/2] Risk assessment complete ({token_count} tokens, {time.time()-t0:.1f}s).")

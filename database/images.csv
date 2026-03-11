@@ -177,3 +177,31 @@ Q4: Are there any potential sources of pollution or contamination in the image? 
 
 OVERALL VERDICT: AT RISK
 SUMMARY: The landscape appears to be at risk due to potential erosion and the presence of bare earth patches, which could indicate a lack of effective land management practices.",AT RISK
+2026-03-11T14:26:51+00:00,50.0391,8.5615,12,512,/Users/lenny/Group_E/images/sat_50.0391_8.5615_z12_512px.png,llava,"You are analysing a satellite image. Describe in detail what you see: terrain type, vegetation, water bodies, urban structures, and any other notable features. Be specific and concise.
+"," The image is an aerial satellite view of a landscape. The terrain is a mix of urban and rural areas, with the urban areas being more densely populated and featuring roads, buildings, and infrastructure. There are green fields and patches of vegetation interspersed throughout the landscape, indicating agricultural or natural areas. Water bodies, such as rivers or lakes, are visible, with one prominent body of water running through the center of the image. The urban structures include roads, buildings, and possibly industrial or commercial areas. There are no notable features that stand out as particularly unusual or noteworthy. The image is a standard satellite photograph with a clear view of the land and water features, providing a comprehensive overview of the area. ",llama3.2,"You are an environmental risk assessment expert reviewing a satellite image description.
+
+Satellite image description:
+ The image is an aerial satellite view of a landscape. The terrain is a mix of urban and rural areas, with the urban areas being more densely populated and featuring roads, buildings, and infrastructure. There are green fields and patches of vegetation interspersed throughout the landscape, indicating agricultural or natural areas. Water bodies, such as rivers or lakes, are visible, with one prominent body of water running through the center of the image. The urban structures include roads, buildings, and possibly industrial or commercial areas. There are no notable features that stand out as particularly unusual or noteworthy. The image is a standard satellite photograph with a clear view of the land and water features, providing a comprehensive overview of the area. 
+
+Task: Identify the most relevant environmental risk questions for this specific area,
+then answer each one based solely on the description above.
+Finally, give an overall verdict.
+
+Format your response EXACTLY like this (include all headers):
+Q1: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q2: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q3: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+(add up to 2 more questions if clearly relevant)
+
+OVERALL VERDICT: [AT RISK / NOT AT RISK / UNCERTAIN]
+SUMMARY: [one or two sentences explaining the overall verdict]
+","Q1: Is there a risk of flooding in the area due to the presence of water bodies? → YES: The presence of rivers or lakes in the center of the image suggests a potential risk of flooding, especially during heavy rainfall or storm events.
+
+Q2: Are there any areas of high conservation value or protected habitats in the landscape? → NO: There are no notable features or areas of high conservation value mentioned in the description, suggesting that the area may not have any protected habitats.
+
+Q3: Is there a risk of pollution from industrial or commercial activities in the urban areas? → UNCERTAIN: While the description mentions industrial or commercial areas, it does not provide any information on the specific activities or emissions associated with these areas, making it uncertain whether there is a risk of pollution.
+
+Q4: Are there any areas of high agricultural productivity or potential for soil erosion? → YES: The presence of green fields and patches of vegetation suggests that the area has potential for agricultural productivity, and the presence of water bodies may also indicate areas of high soil fertility, potentially leading to soil erosion if not managed properly.
+
+OVERALL VERDICT: AT RISK
+SUMMARY: The area is at risk due to potential flooding, and there may be risks associated with industrial or commercial activities, as well as areas of high agricultural productivity that could lead to soil erosion.",AT RISK

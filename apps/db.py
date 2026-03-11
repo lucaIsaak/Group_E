@@ -75,7 +75,7 @@ def find_existing_run(
     return match
 
 
-def log_run(
+def log_run(  # pylint: disable=too-many-arguments,too-many-locals
     *,
     latitude: float,
     longitude: float,
