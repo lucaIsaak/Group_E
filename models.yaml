@@ -1,0 +1,48 @@
+# models.yaml
+# AI workflow configuration for Project Okavango.
+# This file is read at startup by apps/ollama_analysis.py to configure
+# both the vision step (image → description) and the text step
+# (description → environmental risk assessment).
+
+# ---------------------------------------------------------------------------
+# Step 1: Vision model — analyses the satellite image
+# ---------------------------------------------------------------------------
+vision:
+  model: llava          # Ollama model tag; must support image inputs
+  temperature: 0.2      # Lower = more factual, less creative
+  prompt: >
+    You are analysing a satellite image.
+    Describe in detail what you see: terrain type, vegetation, water bodies,
+    urban structures, and any other notable features.
+    Be specific and concise.
+
+  # Image settings passed to the satellite fetcher (apps/satellite.py)
+  image:
+    default_zoom: 12          # Slippy Map zoom level (1–18)
+    default_size_px: 512      # Output image size; must be a multiple of 256
+    tile_timeout_seconds: 15  # HTTP timeout per tile request
+
+# ---------------------------------------------------------------------------
+# Step 2: Text model — analyses the description produced in Step 1
+# ---------------------------------------------------------------------------
+text:
+  model: llama3.2       # Ollama model tag; text-only
+  temperature: 0.3
+  prompt_template: |
+    You are an environmental risk assessment expert reviewing a satellite image description.
+
+    Satellite image description:
+    {description}
+
+    Task: Identify the most relevant environmental risk questions for this specific area,
+    then answer each one based solely on the description above.
+    Finally, give an overall verdict.
+
+    Format your response EXACTLY like this (include all headers):
+    Q1: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+    Q2: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+    Q3: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+    (add up to 2 more questions if clearly relevant)
+
+    OVERALL VERDICT: [AT RISK / NOT AT RISK / UNCERTAIN]
+    SUMMARY: [one or two sentences explaining the overall verdict]

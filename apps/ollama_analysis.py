@@ -6,49 +6,42 @@ Satellite image analysis using a local Ollama vision model.
 The model is pulled automatically if it is not already present on the user's
 machine.  Analysis is streamed token-by-token so the UI can show a live
 progress indicator.
+
+All AI settings (models, prompts, temperatures) are loaded from
+``models.yaml`` in the project root directory.
 """
 
 from __future__ import annotations
 
 import time
 from pathlib import Path
-from typing import Iterator
+from typing import Any, Dict, Iterator
 
 import ollama
+import yaml
 
 # ---------------------------------------------------------------------------
-# Configuration
+# Configuration — loaded from models.yaml
 # ---------------------------------------------------------------------------
 
-VISION_MODEL = "llava"
-TEXT_MODEL = "llama3.2"
+_CONFIG_PATH = Path(__file__).resolve().parent.parent / "models.yaml"
 
-_PROMPT = (
-    "You are analysing a satellite image. "
-    "Describe in detail what you see: terrain type, vegetation, water bodies, "
-    "urban structures, and any other notable features. "
-    "Be specific and concise."
-)
 
-_RISK_PROMPT_TEMPLATE = """\
-You are an environmental risk assessment expert reviewing a satellite image description.
+def _load_config() -> Dict[str, Any]:
+    with open(_CONFIG_PATH, "r", encoding="utf-8") as fh:
+        return yaml.safe_load(fh)
 
-Satellite image description:
-{description}
 
-Task: Identify the most relevant environmental risk questions for this specific area, \
-then answer each one based solely on the description above. \
-Finally, give an overall verdict.
+_cfg = _load_config()
 
-Format your response EXACTLY like this (include all headers):
-Q1: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
-Q2: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
-Q3: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
-(add up to 2 more questions if clearly relevant)
+VISION_MODEL: str = _cfg["vision"]["model"]
+TEXT_MODEL: str = _cfg["text"]["model"]
 
-OVERALL VERDICT: [AT RISK / NOT AT RISK / UNCERTAIN]
-SUMMARY: [one or two sentences explaining the overall verdict]
-"""
+_PROMPT: str = _cfg["vision"]["prompt"]
+_RISK_PROMPT_TEMPLATE: str = _cfg["text"]["prompt_template"]
+
+_VISION_TEMPERATURE: float = float(_cfg["vision"].get("temperature", 0.2))
+_TEXT_TEMPERATURE: float = float(_cfg["text"].get("temperature", 0.3))
 
 
 # ---------------------------------------------------------------------------
@@ -122,6 +115,7 @@ def describe_satellite_image(
                 "images": [str(image_path)],
             }
         ],
+        options={"temperature": _VISION_TEMPERATURE},
         stream=True,
     )
 
@@ -168,6 +162,7 @@ def assess_environmental_risk(
     stream = ollama.chat(
         model=model,
         messages=[{"role": "user", "content": prompt}],
+        options={"temperature": _TEXT_TEMPERATURE},
         stream=True,
     )
 
