@@ -1,0 +1,7 @@
+timestamp,latitude,longitude,zoom,image_size_px,image_path,image_model,image_prompt,image_description,text_model,text_prompt,text_description,danger
+2026-03-11T10:00:00,-3.0,-60.0,12,512,/path/to/project/images/sat_-3.0000_-60.0000_z12_512px.png,llava,You are analysing a satellite image. Describe in detail what you see: terrain type vegetation water bodies urban structures and any other notable features. Be specific and concise.,Dense tropical rainforest canopy with a winding river visible in the lower-left. No urban structures. High vegetation density with no visible clearings.,llama3.2,You are an environmental risk assessment expert reviewing a satellite image description.,"Q1: Is there evidence of deforestation? → NO: Dense unbroken canopy with no visible clearings.
+Q2: Are water bodies present and healthy-looking? → YES: A winding river is clearly visible.
+Q3: Is there urban encroachment? → NO: No roads or structures detected.
+
+OVERALL VERDICT: NOT AT RISK
+SUMMARY: The area shows dense intact rainforest with a healthy river. No signs of human disturbance were detected.",NOT AT RISK

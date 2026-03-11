@@ -113,6 +113,10 @@ def fetch_satellite_image(
 
     IMAGES_DIR.mkdir(exist_ok=True)
 
+    output_path = IMAGES_DIR / f"sat_{lat:.4f}_{lon:.4f}_z{zoom}_{size_px}px.png"
+    if output_path.exists():
+        return output_path
+
     tiles_per_side = size_px // TILE_SIZE_PX
     offset = tiles_per_side // 2
     center_x, center_y = _lat_lon_to_tile(lat, lon, zoom)
@@ -125,6 +129,5 @@ def fetch_satellite_image(
             tile = _fetch_tile(tile_x, tile_y, zoom)
             canvas.paste(tile, (col * TILE_SIZE_PX, row * TILE_SIZE_PX))
 
-    output_path = IMAGES_DIR / f"sat_{lat:.4f}_{lon:.4f}_z{zoom}_{size_px}px.png"
     canvas.save(output_path)
     return output_path

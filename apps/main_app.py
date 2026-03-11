@@ -38,7 +38,12 @@ from ollama_analysis import (  # pylint: disable=wrong-import-position,import-er
     describe_satellite_image,
     assess_environmental_risk,
     extract_risk_verdict,
+    VISION_MODEL,
+    TEXT_MODEL,
+    _PROMPT,
+    _RISK_PROMPT_TEMPLATE,
 )
+from db import log_run, find_existing_run  # pylint: disable=wrong-import-position,import-error,wrong-import-order
 
 # ---------------------------------------------------------------------
 # Constants
@@ -517,15 +522,23 @@ def render_page2() -> None:
 
     if st.button("🔍 Fetch Satellite Image", type="primary"):
         size_px = int(image_size.split()[0])
-        with st.spinner("Downloading satellite imagery…"):
-            try:
-                img_path = fetch_satellite_image(latitude, longitude, zoom, size_px)
-                st.session_state[P2_IMAGE_PATH_KEY] = str(img_path)
-                st.session_state.pop(P2_DESCRIPTION_KEY, None)
-                st.session_state.pop(P2_RISK_ASSESSMENT_KEY, None)
-                st.session_state.pop(P2_RISK_VERDICT_KEY, None)
-            except Exception as exc:  # pylint: disable=broad-except
-                st.error(f"Could not fetch satellite image: {exc}")
+        cached = find_existing_run(latitude, longitude, zoom, size_px)
+        if cached:
+            st.info("Loaded from cache — skipping pipeline to save compute.")
+            st.session_state[P2_IMAGE_PATH_KEY] = cached["image_path"]
+            st.session_state[P2_DESCRIPTION_KEY] = cached["image_description"]
+            st.session_state[P2_RISK_ASSESSMENT_KEY] = cached["text_description"]
+            st.session_state[P2_RISK_VERDICT_KEY] = cached["danger"]
+        else:
+            with st.spinner("Downloading satellite imagery…"):
+                try:
+                    img_path = fetch_satellite_image(latitude, longitude, zoom, size_px)
+                    st.session_state[P2_IMAGE_PATH_KEY] = str(img_path)
+                    st.session_state.pop(P2_DESCRIPTION_KEY, None)
+                    st.session_state.pop(P2_RISK_ASSESSMENT_KEY, None)
+                    st.session_state.pop(P2_RISK_VERDICT_KEY, None)
+                except Exception as exc:  # pylint: disable=broad-except
+                    st.error(f"Could not fetch satellite image: {exc}")
 
     if st.session_state.get(P2_IMAGE_PATH_KEY):
         st.subheader("Satellite Image & AI Analysis")
@@ -576,9 +589,22 @@ def render_page2() -> None:
                 full_assessment = st.write_stream(
                     assess_environmental_risk(description)
                 )
+                verdict = extract_risk_verdict(full_assessment)
                 st.session_state[P2_RISK_ASSESSMENT_KEY] = full_assessment
-                st.session_state[P2_RISK_VERDICT_KEY] = extract_risk_verdict(
-                    full_assessment
+                st.session_state[P2_RISK_VERDICT_KEY] = verdict
+                log_run(
+                    latitude=st.session_state[P2_LAT_KEY],
+                    longitude=st.session_state[P2_LON_KEY],
+                    zoom=st.session_state[P2_ZOOM_KEY],
+                    image_size_px=int(st.session_state[P2_SIZE_KEY].split()[0]),
+                    image_path=st.session_state[P2_IMAGE_PATH_KEY],
+                    image_model=VISION_MODEL,
+                    image_prompt=_PROMPT,
+                    image_description=description,
+                    text_model=TEXT_MODEL,
+                    text_prompt=_RISK_PROMPT_TEMPLATE.format(description=description),
+                    text_description=full_assessment,
+                    danger=verdict,
                 )
                 st.rerun()
             except Exception as exc:  # pylint: disable=broad-except
