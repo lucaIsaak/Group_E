@@ -34,6 +34,11 @@ if str(ROOT_PATH) not in sys.path:
 
 from main import OkavangoData  # pylint: disable=wrong-import-position,import-error
 from satellite import fetch_satellite_image  # pylint: disable=wrong-import-position,import-error,wrong-import-order
+from ollama_analysis import (  # pylint: disable=wrong-import-position,import-error,wrong-import-order
+    describe_satellite_image,
+    assess_environmental_risk,
+    extract_risk_verdict,
+)
 
 # ---------------------------------------------------------------------
 # Constants
@@ -59,6 +64,9 @@ P2_LON_KEY = "p2_longitude"
 P2_ZOOM_KEY = "p2_zoom"
 P2_SIZE_KEY = "p2_image_size"
 P2_IMAGE_PATH_KEY = "p2_image_path"
+P2_DESCRIPTION_KEY = "p2_description"
+P2_RISK_ASSESSMENT_KEY = "p2_risk_assessment"
+P2_RISK_VERDICT_KEY = "p2_risk_verdict"
 
 
 @dataclass(frozen=True)
@@ -507,18 +515,74 @@ def render_page2() -> None:
     st.session_state[P2_ZOOM_KEY] = zoom
     st.session_state[P2_SIZE_KEY] = image_size
 
-    if st.button("🔍 Analyse Area", type="primary"):
+    if st.button("🔍 Fetch Satellite Image", type="primary"):
         size_px = int(image_size.split()[0])
         with st.spinner("Downloading satellite imagery…"):
             try:
                 img_path = fetch_satellite_image(latitude, longitude, zoom, size_px)
                 st.session_state[P2_IMAGE_PATH_KEY] = str(img_path)
+                st.session_state.pop(P2_DESCRIPTION_KEY, None)
+                st.session_state.pop(P2_RISK_ASSESSMENT_KEY, None)
+                st.session_state.pop(P2_RISK_VERDICT_KEY, None)
             except Exception as exc:  # pylint: disable=broad-except
                 st.error(f"Could not fetch satellite image: {exc}")
 
     if st.session_state.get(P2_IMAGE_PATH_KEY):
-        st.subheader("Satellite Image")
-        st.image(st.session_state[P2_IMAGE_PATH_KEY], use_container_width=True)
+        st.subheader("Satellite Image & AI Analysis")
+        img_col, desc_col = st.columns(2)
+
+        with img_col:
+            st.image(st.session_state[P2_IMAGE_PATH_KEY], use_container_width=True)
+
+        with desc_col:
+            st.markdown("**AI Description**")
+            if st.session_state.get(P2_DESCRIPTION_KEY):
+                st.markdown(st.session_state[P2_DESCRIPTION_KEY])
+            else:
+                st.caption("Click the button below to generate an AI description.")
+
+            if st.button("🤖 Analyse with AI", type="secondary"):
+                img_path = Path(st.session_state[P2_IMAGE_PATH_KEY])
+                with st.spinner("Pulling model if needed and analysing image… this may take a minute."):
+                    try:
+                        full_description = st.write_stream(
+                            describe_satellite_image(img_path)
+                        )
+                        st.session_state[P2_DESCRIPTION_KEY] = full_description
+                        st.session_state.pop(P2_RISK_ASSESSMENT_KEY, None)
+                        st.session_state.pop(P2_RISK_VERDICT_KEY, None)
+                    except Exception as exc:  # pylint: disable=broad-except
+                        st.error(f"AI analysis failed: {exc}")
+
+    # ------------------------------------------------------------------
+    # Environmental risk assessment — runs automatically once a
+    # description is available.
+    # ------------------------------------------------------------------
+    description = st.session_state.get(P2_DESCRIPTION_KEY)
+    if st.session_state.get(P2_RISK_ASSESSMENT_KEY):
+        st.subheader("🌿 Environmental Risk Assessment")
+        st.markdown(st.session_state[P2_RISK_ASSESSMENT_KEY])
+        verdict = st.session_state.get(P2_RISK_VERDICT_KEY, "UNCERTAIN")
+        if verdict == "AT RISK":
+            st.error("🔴 **AREA FLAGGED AS ENVIRONMENTALLY AT RISK**")
+        elif verdict == "NOT AT RISK":
+            st.success("🟢 **No significant environmental risk detected**")
+        else:
+            st.warning("🟡 **Environmental risk is uncertain — manual review recommended**")
+    elif description:
+        st.subheader("🌿 Environmental Risk Assessment")
+        with st.spinner("Assessing environmental risk… this may take a moment."):
+            try:
+                full_assessment = st.write_stream(
+                    assess_environmental_risk(description)
+                )
+                st.session_state[P2_RISK_ASSESSMENT_KEY] = full_assessment
+                st.session_state[P2_RISK_VERDICT_KEY] = extract_risk_verdict(
+                    full_assessment
+                )
+                st.rerun()
+            except Exception as exc:  # pylint: disable=broad-except
+                st.error(f"Risk assessment failed: {exc}")
 
 
 def render_page1() -> None:
