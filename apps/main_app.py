@@ -685,11 +685,17 @@ def _format_assessment_html(text: str) -> str:
             continue
         upper = line.upper()
         if upper.startswith(("OVERALL VERDICT", "OVERALL:")):
+            if "NOT AT RISK" in upper:
+                bg, fg = "#1e4d42", "#3ecb8a"
+            elif "AT RISK" in upper:
+                bg, fg = "#4d1e1e", "#e05a5a"
+            else:
+                bg, fg = "#4d3e00", "#f5c842"
             rows.append(
-                '<div style="margin-top:1rem;padding:0.7rem 1rem;'
-                'background:#1e4d42;border-radius:8px;'
-                'font-family:Barlow Condensed,sans-serif;font-weight:700;'
-                f'font-size:1.05rem;color:#3ecb8a;">{line}</div>'
+                f'<div style="margin-top:1rem;padding:0.7rem 1rem;'
+                f'background:{bg};border-radius:8px;'
+                f'font-family:Barlow Condensed,sans-serif;font-weight:700;'
+                f'font-size:1.05rem;color:{fg};">{line}</div>'
             )
         elif upper.startswith("SUMMARY"):
             rows.append(
