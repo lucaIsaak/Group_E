@@ -45,7 +45,7 @@ from ollama_analysis import (  # pylint: disable=wrong-import-position,import-er
     _PROMPT,
     _RISK_PROMPT_TEMPLATE,
 )
-from db import log_run, find_existing_run  # pylint: disable=wrong-import-position,import-error,wrong-import-order
+from db import log_run, find_existing_run, DB_PATH  # pylint: disable=wrong-import-position,import-error,wrong-import-order
 import folium  # pylint: disable=wrong-import-position,import-error,wrong-import-order
 from streamlit_folium import st_folium  # pylint: disable=wrong-import-position,import-error,wrong-import-order
 
@@ -67,6 +67,8 @@ DEFAULT_BAR_HEIGHT = 320
 
 PAGE_MAP = "World Map"
 PAGE_AI = "AI Workflow"
+PAGE_HISTORY = "History"
+PAGE_ABOUT = "About"
 PAGE_KEY = "current_page"
 
 P2_LAT_KEY = "p2_latitude"
@@ -403,12 +405,18 @@ def compute_top_bottom(
 
 def render_set_kpis(kpis: SetKpis) -> None:
     """Render KPIs for the current filtered set."""
-    st.subheader("KPIs (based on current filters)")
-
+    st.subheader("Summary statistics")
+    st.caption(
+        "These figures cover all countries currently visible on the map "
+        "(based on your region filter and the selected dataset)."
+    )
     col1, col2, col3 = st.columns(3)
-    col1.metric("Countries with data", f"{kpis.countries_with_data:,}")
-    col2.metric("Average", f"{kpis.avg:,.3f}")
-    col3.metric("Range", f"{kpis.min_val:,.3f} to {kpis.max_val:,.3f}")
+    col1.metric("Countries with data", f"{kpis.countries_with_data:,}",
+                help="Number of countries that have a recorded value for this metric in the most recent available year.")
+    col2.metric("Average", f"{kpis.avg:,.3f}",
+                help="Mean value across all filtered countries.")
+    col3.metric("Range", f"{kpis.min_val:,.3f} → {kpis.max_val:,.3f}",
+                help="Lowest and highest recorded values within the current filter.")
 
 
 def render_selected_country(kpis: CountryKpis) -> None:
@@ -618,7 +626,18 @@ def _render_fetch_and_describe() -> None:
     if not st.session_state.get(P2_IMAGE_PATH_KEY):
         return
 
-    st.subheader("Satellite Image & AI Analysis")
+    title_col, clear_col = st.columns([5, 1])
+    with title_col:
+        st.subheader("Satellite Image & AI Analysis")
+    with clear_col:
+        st.markdown("<div style='padding-top:0.6rem;'>", unsafe_allow_html=True)
+        if st.button("Clear results", type="tertiary", use_container_width=True):
+            for key in (P2_IMAGE_PATH_KEY, P2_DESCRIPTION_KEY,
+                        P2_RISK_ASSESSMENT_KEY, P2_RISK_VERDICT_KEY):
+                st.session_state.pop(key, None)
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+
     img_col, desc_col = st.columns(2)
     with img_col:
         st.image(st.session_state[P2_IMAGE_PATH_KEY], use_container_width=True)
@@ -742,7 +761,7 @@ def render_page2() -> None:
     st.markdown(
         """
         <div class="ok-page-hero">
-          <p class="ok-page-title">🛰 AI Workflow</p>
+          <p class="ok-page-title">AI Workflow</p>
           <p class="ok-page-desc">
             Select a location on Earth — fetch satellite imagery and run AI environmental risk detection.
           </p>
@@ -763,12 +782,291 @@ def render_page2() -> None:
     _render_risk_assessment()
 
 
+# ---------------------------------------------------------------------------
+# Page 3 — History
+# ---------------------------------------------------------------------------
+
+def _verdict_badge(verdict: str) -> str:
+    """Return a coloured HTML badge for a risk verdict."""
+    colours = {
+        "AT RISK":     ("#e05a5a", "#2a0a0a"),
+        "NOT AT RISK": ("#3ecb8a", "#071917"),
+        "UNCERTAIN":   ("#f5c842", "#1a1400"),
+    }
+    bg, fg = colours.get(verdict.strip().upper(), ("#7fbfb0", "#0a2420"))
+    return (
+        f'<span style="background:{bg};color:{fg};padding:0.2rem 0.7rem;'
+        f'border-radius:20px;font-size:0.78rem;font-weight:700;'
+        f'text-transform:uppercase;letter-spacing:0.8px;white-space:nowrap;">'
+        f'{verdict}</span>'
+    )
+
+
+def render_page3() -> None:
+    """Render Page 3: browsable history of past AI analyses."""
+    st.markdown(
+        """
+        <div class="ok-page-hero">
+          <p class="ok-page-title">Analysis History</p>
+          <p class="ok-page-desc">
+            All past satellite AI analyses — most recent first.
+          </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if not DB_PATH.exists() or DB_PATH.stat().st_size == 0:
+        st.info("No analyses yet. Run the AI Workflow on a location to see results here.")
+        return
+
+    df = pd.read_csv(DB_PATH)
+    if df.empty:
+        st.info("No analyses yet.")
+        return
+
+    # Newest first
+    df = df.iloc[::-1].reset_index(drop=True)
+
+    st.caption(f"{len(df)} result{'s' if len(df) != 1 else ''} in database")
+
+    _BORDER_COLOUR = {"AT RISK": "#e05a5a", "NOT AT RISK": "#3ecb8a", "UNCERTAIN": "#f5c842"}
+
+    for i, row in df.iterrows():
+        verdict     = str(row.get("danger", "UNCERTAIN")).strip().upper()
+        lat         = row.get("latitude",       "—")
+        lon         = row.get("longitude",      "—")
+        zoom        = row.get("zoom",           "—")
+        size        = row.get("image_size_px",  "—")
+        ts          = str(row.get("timestamp", ""))[:19].replace("T", "  ")
+        img_path    = str(row.get("image_path",        ""))
+        description = str(row.get("image_description", ""))
+        assessment  = str(row.get("text_description",  ""))
+
+        border = _BORDER_COLOUR.get(verdict, "#7fbfb0")
+
+        # Compact card row — always visible
+        st.markdown(
+            f"""
+            <div style="
+                border-left: 4px solid {border};
+                background: #071917;
+                border-radius: 0 8px 8px 0;
+                padding: 0.85rem 1.2rem;
+                margin-bottom: 0.25rem;
+                display: flex;
+                align-items: center;
+                gap: 1.4rem;
+                flex-wrap: wrap;
+            ">
+              {_verdict_badge(verdict)}
+              <span style="font-size:0.95rem;font-weight:600;color:#ffffff;">
+                Lat {lat}° &nbsp; Lon {lon}°
+              </span>
+              <span style="color:#5a9e8a;font-size:0.82rem;">
+                Zoom {zoom} &nbsp;·&nbsp; {size} px
+              </span>
+              <span style="color:#3d7a6a;font-size:0.8rem;margin-left:auto;">
+                {ts} UTC
+              </span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # Expandable detail panel
+        with st.expander("View details", expanded=False):
+            img_col, detail_col = st.columns([1, 2])
+
+            with img_col:
+                if img_path and Path(img_path).exists():
+                    st.image(img_path, use_container_width=True)
+                else:
+                    st.caption("Image file not found on disk.")
+
+            with detail_col:
+                if description:
+                    st.markdown("**AI Description**")
+                    st.markdown(description)
+                if assessment:
+                    st.markdown("**Risk Assessment**")
+                    st.markdown(
+                        _format_assessment_html(assessment),
+                        unsafe_allow_html=True,
+                    )
+
+        st.markdown("<div style='height:0.6rem;'></div>", unsafe_allow_html=True)
+
+
+def render_about() -> None:
+    """Render the About page."""
+    st.markdown(
+        """
+        <div class="ok-page-hero">
+          <p class="ok-page-title">About</p>
+          <p class="ok-page-desc">What this project is, how it works, and who built it.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ── Mission ──────────────────────────────────────────────────────────────
+    st.markdown(
+        """
+        <div style="background:#071917;border-radius:10px;padding:1.6rem 2rem;margin-bottom:1.5rem;">
+          <p style="font-size:1.05rem;font-weight:600;color:#3ecb8a;
+                    text-transform:uppercase;letter-spacing:1px;margin:0 0 0.6rem 0;">
+            Our Mission
+          </p>
+          <p style="font-size:0.97rem;color:#d4f5e9;line-height:1.7;margin:0;">
+            Project Okavango is an environmental intelligence platform built to make global
+            deforestation and land-degradation data accessible and actionable. It combines
+            open satellite imagery with local AI models to flag areas at environmental risk —
+            helping researchers, policymakers, and curious citizens understand what is
+            happening to our planet's ecosystems in near real-time.
+          </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ── How to use ───────────────────────────────────────────────────────────
+    st.markdown("### How to use this platform")
+
+    col1, col2, col3 = st.columns(3)
+    _card_style = (
+        "background:#071917;border:1px solid #1e4d42;border-radius:10px;"
+        "padding:1.3rem 1.4rem;height:100%;"
+    )
+    with col1:
+        st.markdown(
+            f"""<div style="{_card_style}">
+              <p style="color:#3ecb8a;font-weight:700;font-size:0.8rem;
+                        text-transform:uppercase;letter-spacing:1px;margin:0 0 0.5rem 0;">
+                World Map
+              </p>
+              <p style="color:#d4f5e9;font-size:0.88rem;line-height:1.6;margin:0;">
+                Choose one of five environmental datasets and explore how countries compare.
+                Use the region filter to focus on a continent, click any country to see its
+                individual ranking and value, and scroll down for the Top 5 / Bottom 5 breakdown.
+              </p>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+    with col2:
+        st.markdown(
+            f"""<div style="{_card_style}">
+              <p style="color:#3ecb8a;font-weight:700;font-size:0.8rem;
+                        text-transform:uppercase;letter-spacing:1px;margin:0 0 0.5rem 0;">
+                AI Workflow
+              </p>
+              <p style="color:#d4f5e9;font-size:0.88rem;line-height:1.6;margin:0;">
+                Click anywhere on the satellite map (or type coordinates manually) to select
+                a location. Fetch the satellite image, then run the two-step AI pipeline:
+                a vision model describes the terrain, and a language model delivers an
+                environmental risk verdict — AT RISK, NOT AT RISK, or UNCERTAIN.
+              </p>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+    with col3:
+        st.markdown(
+            f"""<div style="{_card_style}">
+              <p style="color:#3ecb8a;font-weight:700;font-size:0.8rem;
+                        text-transform:uppercase;letter-spacing:1px;margin:0 0 0.5rem 0;">
+                History
+              </p>
+              <p style="color:#d4f5e9;font-size:0.88rem;line-height:1.6;margin:0;">
+                Every completed AI analysis is saved to a local database. The History page
+                lets you browse all past results, compare verdicts across locations, and
+                revisit the satellite images and AI assessments without re-running the
+                (slow) models.
+              </p>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("<div style='height:1.5rem;'></div>", unsafe_allow_html=True)
+
+    # ── Datasets ─────────────────────────────────────────────────────────────
+    st.markdown("### Data sources")
+    datasets = [
+        ("Annual change in forest area",    "FAO / Our World in Data", "Net yearly gain or loss of forest cover per country, in hectares."),
+        ("Annual deforestation",            "FAO / Our World in Data", "Forest area permanently cleared each year. Does not offset regrowth."),
+        ("Share of land that is protected", "World Bank",              "% of national territory under official protection (parks, reserves, etc.)."),
+        ("Share of land that is degraded",  "UN SDG 15.3.1",           "% of land degraded by erosion, desertification, or soil loss."),
+        ("Red List Index",                  "IUCN / Our World in Data","Extinction-risk index from 0.0 (worst) to 1.0 (all species safe)."),
+    ]
+    for name, source, desc in datasets:
+        st.markdown(
+            f"""
+            <div style="display:flex;gap:1rem;align-items:flex-start;
+                        padding:0.8rem 0;border-bottom:1px solid #1e4d42;">
+              <div style="min-width:220px;font-weight:600;
+                          color:#ffffff;font-size:0.88rem;">{name}</div>
+              <div style="min-width:160px;color:#5a9e8a;
+                          font-size:0.82rem;padding-top:1px;">{source}</div>
+              <div style="color:#a8d8c8;font-size:0.85rem;">{desc}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("<div style='height:1.5rem;'></div>", unsafe_allow_html=True)
+
+    # ── Tech stack ───────────────────────────────────────────────────────────
+    st.markdown("### Technology")
+    tech = [
+        ("Streamlit",       "Web dashboard framework"),
+        ("Ollama + llava",  "Local vision model — describes satellite imagery"),
+        ("Ollama + llama3.2","Local language model — generates risk assessment"),
+        ("ESRI World Imagery","Free satellite tile provider (no API key required)"),
+        ("GeoPandas / Plotly","Geospatial data processing and interactive maps"),
+        ("Our World in Data","Open environmental datasets (CC BY licence)"),
+    ]
+    t_cols = st.columns(2)
+    for idx, (tech_name, tech_desc) in enumerate(tech):
+        with t_cols[idx % 2]:
+            st.markdown(
+                f"""<div style="background:#071917;border:1px solid #1e4d42;
+                               border-radius:8px;padding:0.7rem 1rem;margin-bottom:0.6rem;">
+                  <span style="color:#3ecb8a;font-weight:700;
+                               font-size:0.85rem;">{tech_name}</span>
+                  <span style="color:#7fbfb0;font-size:0.82rem;
+                               margin-left:0.6rem;">{tech_desc}</span>
+                </div>""",
+                unsafe_allow_html=True,
+            )
+
+    st.markdown("<div style='height:1.5rem;'></div>", unsafe_allow_html=True)
+
+    # ── Team ─────────────────────────────────────────────────────────────────
+    st.markdown("### Team")
+    st.markdown(
+        """
+        <div style="background:#071917;border:1px solid #1e4d42;border-radius:10px;
+                    padding:1.2rem 1.6rem;display:inline-block;">
+          <p style="color:#7fbfb0;font-size:0.88rem;margin:0;line-height:1.7;">
+            Built by <strong style="color:#ffffff;">Group E</strong> as part of the
+            <strong style="color:#ffffff;">Advanced Programming for Data Science</strong>
+            course — Nova SBE, 2026.<br>
+            Submitted to the hackathon track addressing UN Sustainable Development Goals
+            <strong style="color:#3ecb8a;">SDG 2</strong>,
+            <strong style="color:#3ecb8a;">SDG 13</strong>, and
+            <strong style="color:#3ecb8a;">SDG 15</strong>.
+          </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_page1() -> None:
     """Render Page 1: interactive world-map dashboard."""
     st.markdown(
         """
         <div class="ok-page-hero">
-          <p class="ok-page-title">🗺 World Map</p>
+          <p class="ok-page-title">World Map</p>
           <p class="ok-page-desc">
             Explore global environmental metrics — click a country for details.
           </p>
@@ -784,8 +1082,49 @@ def render_page1() -> None:
         "Red List Index": "_15_5_1__er_rsk_lst",
     }
 
+    _METRIC_INFO: Dict[str, str] = {
+        "Annual change in forest area": (
+            "Net gain or loss of forest area per year, in hectares. "
+            "Positive values mean forests are growing; negative values mean more forest is being lost than gained. "
+            "Source: Our World in Data / FAO."
+        ),
+        "Annual deforestation": (
+            "Total forest area permanently cleared each year, in hectares. "
+            "This only counts losses — unlike the metric above, it does not offset gains. "
+            "Higher values indicate greater destruction. Source: Our World in Data / FAO."
+        ),
+        "Share of land that is protected": (
+            "Percentage of a country's total land area officially designated as protected — "
+            "national parks, nature reserves, wildlife sanctuaries, etc. "
+            "Higher values mean more land is shielded from industrial use. Source: World Bank."
+        ),
+        "Share of land that is degraded": (
+            "Percentage of land affected by degradation: erosion, desertification, soil depletion, "
+            "or loss of vegetation cover caused by human activity. "
+            "Tracks UN Sustainable Development Goal 15.3.1. Source: Our World in Data / UN."
+        ),
+        "Red List Index": (
+            "Measures the overall extinction risk across species groups (mammals, birds, amphibians, etc.). "
+            "Ranges from 1.0 (all species at least concern) down to 0.0 (all species extinct). "
+            "A declining index means biodiversity is worsening. Source: IUCN / Our World in Data."
+        ),
+    }
+
     dataset_name = st.selectbox("Select dataset:", list(dataset_to_metric.keys()))
     metric_col = dataset_to_metric[dataset_name]
+
+    st.markdown(
+        f"""
+        <div style="background:#071917;border-left:3px solid #3ecb8a;
+                    border-radius:0 8px 8px 0;padding:0.75rem 1.1rem;
+                    margin:0.5rem 0 1.2rem 0;">
+          <span style="font-size:0.82rem;color:#a8d8c8;line-height:1.5;">
+            {_METRIC_INFO[dataset_name]}
+          </span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     with st.spinner("Loading data..."):
         okavango = get_processed_data(build_dataset_config())
@@ -993,6 +1332,22 @@ def _inject_css() -> None:
         [data-testid="stMetricValue"] { color:#ffffff !important; }
         [data-testid="stMetricLabel"] p { color:#7fbfb0 !important; }
 
+        /* ── History expanders ───────────────────────────────────── */
+        [data-testid="stExpander"] {
+            background:#071917 !important;
+            border:1px solid #1e4d42 !important;
+            border-radius:0 0 8px 8px !important;
+            border-top:none !important;
+            margin-top:-1px !important;
+            margin-bottom:0 !important;
+        }
+        [data-testid="stExpander"] summary {
+            color:#7fbfb0 !important;
+            font-size:0.82rem !important;
+            padding:0.5rem 1.2rem !important;
+        }
+        [data-testid="stExpander"] summary:hover { color:#ffffff !important; }
+
         /* ── Misc ────────────────────────────────────────────────── */
         hr { border-color:#1e4d42 !important; margin:0.5rem 0 1.2rem 0; }
         [data-testid="stAlert"] { border-radius:10px !important; }
@@ -1003,8 +1358,10 @@ def _inject_css() -> None:
 
 def _render_navbar(active_page: str) -> None:
     """Render the sticky top navigation bar with logo and page links."""
-    world_active = "ok-nav-active" if active_page == PAGE_MAP else ""
-    ai_active = "ok-nav-active" if active_page == PAGE_AI else ""
+    world_active   = "ok-nav-active" if active_page == PAGE_MAP     else ""
+    ai_active      = "ok-nav-active" if active_page == PAGE_AI      else ""
+    history_active = "ok-nav-active" if active_page == PAGE_HISTORY else ""
+    about_active   = "ok-nav-active" if active_page == PAGE_ABOUT   else ""
     st.markdown(
         f"""
         <div class="ok-navbar">
@@ -1016,12 +1373,10 @@ def _render_navbar(active_page: str) -> None:
             </div>
           </div>
           <nav class="ok-nav">
-            <a href="?page=world_map" target="_self" class="ok-navlink {world_active}">
-              <span class="ok-nav-icon">🗺</span>&nbsp;World Map
-            </a>
-            <a href="?page=ai_workflow" target="_self" class="ok-navlink {ai_active}">
-              <span class="ok-nav-icon">🛰</span>&nbsp;AI Workflow
-            </a>
+            <a href="?page=world_map" target="_self" class="ok-navlink {world_active}">World Map</a>
+            <a href="?page=ai_workflow" target="_self" class="ok-navlink {ai_active}">AI Workflow</a>
+            <a href="?page=history" target="_self" class="ok-navlink {history_active}">History</a>
+            <a href="?page=about" target="_self" class="ok-navlink {about_active}">About</a>
           </nav>
         </div>
         """,
@@ -1033,16 +1388,27 @@ def main() -> None:
     """Run the Streamlit dashboard."""
     st.set_page_config(
         page_title="Project Okavango",
-        page_icon="🌿",
+        page_icon=None,
         layout="wide",
     )
     _inject_css()
     # Derive active page from URL query params (set by navbar anchor links)
     page_param = st.query_params.get("page", "world_map")
-    active_page = PAGE_AI if page_param == "ai_workflow" else PAGE_MAP
+    if page_param == "ai_workflow":
+        active_page = PAGE_AI
+    elif page_param == "history":
+        active_page = PAGE_HISTORY
+    elif page_param == "about":
+        active_page = PAGE_ABOUT
+    else:
+        active_page = PAGE_MAP
     _render_navbar(active_page)
     if active_page == PAGE_AI:
         render_page2()
+    elif active_page == PAGE_HISTORY:
+        render_page3()
+    elif active_page == PAGE_ABOUT:
+        render_about()
     else:
         render_page1()
 
