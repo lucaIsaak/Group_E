@@ -19,6 +19,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
+import base64
+
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -495,9 +497,13 @@ _ESRI_TILES = (
 )
 
 
+P2_MAP_KEY = "p2_map_key"  # incremented on reset to force full folium re-render
+
+
 def _init_page2_state() -> None:
     """Initialise Page 2 session-state keys on first load."""
-    defaults = {P2_LAT_KEY: 0.0, P2_LON_KEY: 0.0, P2_ZOOM_KEY: 12, P2_SIZE_KEY: "512 px"}
+    defaults = {P2_LAT_KEY: 0.0, P2_LON_KEY: 0.0, P2_ZOOM_KEY: 12, P2_SIZE_KEY: "512 px",
+                P2_MAP_KEY: 0}
     for key, val in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = val
@@ -527,6 +533,7 @@ def _render_folium_map() -> None:
             returned_objects=["last_clicked"],
             center=[lat, lon],
             feature_group_to_add=pin_group,
+            key=f"folium_map_{st.session_state[P2_MAP_KEY]}",
         )
 
     if map_data and map_data.get("last_clicked"):
@@ -540,8 +547,9 @@ def _render_folium_map() -> None:
             st.rerun()
 
     if st.button("Reset pin", type="tertiary"):
-        st.session_state[P2_LAT_KEY] = 0.0
-        st.session_state[P2_LON_KEY] = 0.0
+        st.session_state[P2_STAGED_LAT_KEY] = 0.0
+        st.session_state[P2_STAGED_LON_KEY] = 0.0
+        st.session_state[P2_MAP_KEY] = st.session_state[P2_MAP_KEY] + 1
         st.session_state.pop(P2_LAST_CLICK_KEY, None)
         st.rerun()
 
@@ -732,8 +740,15 @@ def _render_risk_assessment() -> None:
 def render_page2() -> None:
     """Render Page 2: coordinate selection for the AI satellite-imagery workflow."""
     st.markdown(
-        "Enter coordinates manually or click on the satellite map below "
-        "to select an area of interest."
+        """
+        <div class="ok-page-hero">
+          <p class="ok-page-title">🛰 AI Workflow</p>
+          <p class="ok-page-desc">
+            Select a location on Earth — fetch satellite imagery and run AI environmental risk detection.
+          </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
     _init_page2_state()
     # Apply any click staged by the previous run BEFORE widgets are instantiated,
@@ -750,6 +765,17 @@ def render_page2() -> None:
 
 def render_page1() -> None:
     """Render Page 1: interactive world-map dashboard."""
+    st.markdown(
+        """
+        <div class="ok-page-hero">
+          <p class="ok-page-title">🗺 World Map</p>
+          <p class="ok-page-desc">
+            Explore global environmental metrics — click a country for details.
+          </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     dataset_to_metric: Dict[str, str] = {
         "Annual change in forest area": "net_change_forest_area",
         "Annual deforestation": "_1d_deforestation",
@@ -831,6 +857,24 @@ _FONT_LINK = (
     '&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">'
 )
 
+_LOGO_SVG_SOURCE = (
+    '<svg width="38" height="38" viewBox="0 0 38 38" fill="none"'
+    ' xmlns="http://www.w3.org/2000/svg">'
+    '<polygon points="19,3 35,34 3,34" fill="#3ecb8a" fill-opacity="0.12"'
+    ' stroke="#3ecb8a" stroke-width="1.6" stroke-linejoin="round"/>'
+    '<line x1="19" y1="9" x2="19" y2="32" stroke="#3ecb8a" stroke-width="1.5" stroke-linecap="round"/>'
+    '<line x1="19" y1="15" x2="13" y2="28" stroke="#3ecb8a" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>'
+    '<line x1="19" y1="15" x2="25" y2="28" stroke="#3ecb8a" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>'
+    '<line x1="19" y1="21" x2="10" y2="32" stroke="#3ecb8a" stroke-width="0.9" stroke-linecap="round" opacity="0.5"/>'
+    '<line x1="19" y1="21" x2="28" y2="32" stroke="#3ecb8a" stroke-width="0.9" stroke-linecap="round" opacity="0.5"/>'
+    '</svg>'
+)
+_LOGO_IMG = (
+    '<img src="data:image/svg+xml;base64,'
+    + base64.b64encode(_LOGO_SVG_SOURCE.encode()).decode()
+    + '" width="38" height="38" style="display:block;flex-shrink:0;">'
+)
+
 
 def _inject_css() -> None:
     """Inject global custom CSS for a polished, green-themed UI."""
@@ -843,120 +887,161 @@ def _inject_css() -> None:
         { font-family:'Barlow',sans-serif !important; }
         h1,h2,h3,h4,h5,h6,.stMarkdown h1,.stMarkdown h2,
         .stMarkdown h3,.stMarkdown h4
-        { font-family:'Barlow Condensed',sans-serif !important;
-          font-weight:800 !important; letter-spacing:0.5px !important;
-          text-transform:uppercase !important; }
+        { font-family:'Barlow',sans-serif !important;
+          font-weight:700 !important; letter-spacing:0.2px !important;
+          text-transform:none !important; }
         .stApp,[data-testid="stAppViewContainer"],
         [data-testid="stMain"],[data-testid="block-container"]
         { background-color:#0d2e2a !important; color:#ffffff !important; }
-        [data-testid="stHeader"] { background-color:#0d2e2a !important; }
+        [data-testid="stHeader"] { display:none !important; }
         html,body { overflow-x:hidden !important; }
         [data-testid="stAppViewContainer"],[data-testid="stMain"]
         { overflow-x:hidden !important; max-width:100vw !important; }
         [data-testid="block-container"]
-        { max-width:1100px !important; padding-left:2.5rem !important;
-          padding-right:2.5rem !important;
+        { max-width:1200px !important; padding-left:2.5rem !important;
+          padding-right:2.5rem !important; padding-top:0 !important;
           margin-left:auto !important; margin-right:auto !important; }
         h1,h2,h3,h4,h5,h6,p,label,span,.stMarkdown,.stMarkdown p
         { color:#ffffff !important; }
         .stCaption,[data-testid="stCaptionContainer"] p
         { color:#7fbfb0 !important; }
         section[data-testid="stSidebar"] { display:none !important; }
-        .nav-btn button { border-radius:24px !important;
-          font-weight:700 !important; font-size:0.95rem !important;
-          transition:transform 0.1s ease,opacity 0.1s ease; }
-        .nav-btn button:hover { transform:scale(1.04); }
+
+        /* ── Navbar ─────────────────────────────────────────────── */
+        .ok-navbar {
+            display:flex; align-items:center; justify-content:space-between;
+            background:#071917;
+            border-bottom:1px solid #1e4d42;
+            padding:0 2.5rem;
+            height:68px;
+            position:sticky; top:0; z-index:1000;
+            width:calc(100% + 5rem);
+            margin-left:-2.5rem; margin-right:-2.5rem;
+            margin-bottom:2rem;
+            box-sizing:border-box;
+        }
+        .ok-brand { display:flex; align-items:center; gap:0.75rem; }
+        .ok-brand-text { display:flex; flex-direction:column; line-height:1; }
+        .ok-title {
+            font-family:'Barlow Condensed',sans-serif !important;
+            font-size:1.65rem !important; font-weight:800 !important;
+            letter-spacing:2.5px !important; text-transform:uppercase !important;
+            color:#ffffff !important; white-space:nowrap;
+        }
+        .ok-subtitle {
+            font-size:0.68rem !important; color:#5a9e8a !important;
+            text-transform:uppercase !important; letter-spacing:1.2px !important;
+            margin-top:3px;
+        }
+        .ok-nav { display:flex; align-items:stretch; height:68px; gap:0; }
+        .ok-navlink {
+            display:flex; align-items:center; gap:0.45rem;
+            padding:0 1.6rem;
+            font-family:'Barlow',sans-serif !important;
+            font-size:0.95rem !important; font-weight:600 !important;
+            text-decoration:none !important;
+            border-bottom:2px solid transparent;
+            color:#7fbfb0 !important;
+            text-transform:uppercase !important; letter-spacing:1px !important;
+            transition:color 0.15s, border-color 0.15s;
+            white-space:nowrap;
+        }
+        .ok-navlink:hover { color:#d4f5e9 !important; border-bottom-color:#3ecb8a60 !important; }
+        .ok-nav-active { color:#ffffff !important; border-bottom-color:#3ecb8a !important; }
+        .ok-nav-icon { font-size:0.95rem; }
+
+        /* ── Page hero strip ──────────────────────────────────────── */
+        .ok-page-hero {
+            padding:1.4rem 0 1.2rem 0;
+            border-bottom:1px solid #1e4d42;
+            margin-bottom:1.8rem;
+        }
+        .ok-page-title {
+            font-family:'Barlow Condensed',sans-serif !important;
+            font-size:1.7rem !important; font-weight:800 !important;
+            letter-spacing:1.5px !important; text-transform:uppercase !important;
+            color:#ffffff !important; margin:0 !important;
+        }
+        .ok-page-desc {
+            font-size:0.82rem !important; color:#7fbfb0 !important;
+            margin:0.3rem 0 0 0 !important; letter-spacing:0.3px !important;
+        }
+
+        /* ── Buttons ─────────────────────────────────────────────── */
         .stButton button[kind="primary"]
-        { background-color:#3ecb8a !important; color:#0d2e2a !important;
-          border:none !important; }
+        { background-color:#3ecb8a !important; color:#071917 !important;
+          border:none !important; border-radius:6px !important;
+          font-weight:700 !important; }
         .stButton button[kind="secondary"]
         { background-color:transparent !important; color:#3ecb8a !important;
-          border:1.5px solid #3ecb8a !important; }
+          border:1.5px solid #3ecb8a !important; border-radius:6px !important; }
         .stButton button[kind="tertiary"]
-        { color:#7fbfb0 !important; border:1px solid #1e4d42 !important; }
-        .stSelectbox>div>div,.stNumberInput>div>div>input,
-        .stSlider [data-testid="stSlider"]
+        { color:#7fbfb0 !important; border:1px solid #1e4d42 !important;
+          border-radius:6px !important; }
+
+        /* ── Form controls ───────────────────────────────────────── */
+        .stSelectbox>div>div,.stNumberInput>div>div>input
         { background-color:#0a2420 !important; color:#ffffff !important;
           border:1px solid #1e4d42 !important; border-radius:8px !important; }
         .stMultiSelect>div
-        { background-color:#0a2420 !important;
-          border:1px solid #1e4d42 !important; }
+        { background-color:#0a2420 !important; border:1px solid #1e4d42 !important; }
+
+        /* ── KPI cards ───────────────────────────────────────────── */
         div[data-testid="metric-container"]
-        { background:#0a2420 !important; border:1px solid #1e4d42 !important;
-          border-radius:12px !important; padding:0.9rem 1rem !important; }
+        { background:#071917 !important; border:1px solid #1e4d42 !important;
+          border-radius:10px !important; padding:1rem 1.1rem !important; }
         [data-testid="stMetricValue"] { color:#ffffff !important; }
         [data-testid="stMetricLabel"] p { color:#7fbfb0 !important; }
-        hr { border-color:#1e4d42 !important; margin:0.5rem 0 1rem 0; }
+
+        /* ── Misc ────────────────────────────────────────────────── */
+        hr { border-color:#1e4d42 !important; margin:0.5rem 0 1.2rem 0; }
         [data-testid="stAlert"] { border-radius:10px !important; }
         </style>""",
         unsafe_allow_html=True,
     )
 
 
-def _render_header() -> None:
-    """Render the project banner at the top of every page."""
+def _render_navbar(active_page: str) -> None:
+    """Render the sticky top navigation bar with logo and page links."""
+    world_active = "ok-nav-active" if active_page == PAGE_MAP else ""
+    ai_active = "ok-nav-active" if active_page == PAGE_AI else ""
     st.markdown(
-        """
-        <div style="padding:1.2rem 0 0.6rem 0;">
-          <h1 style="color:#ffffff;margin:0;
-                     font-family:'Barlow Condensed',sans-serif;
-                     font-size:2.6rem;font-weight:800;
-                     letter-spacing:2px;text-transform:uppercase;
-                     line-height:1.1;">
-            Project Okavango
-          </h1>
-          <p style="color:#7fbfb0;margin:0.3rem 0 0.7rem 0;
-                    font-family:'Barlow',sans-serif;font-size:0.88rem;
-                    letter-spacing:0.5px;text-transform:uppercase;">
-            Environmental Intelligence &amp; AI Risk Detection
-          </p>
-          <div style="height:2px;background:#3ecb8a;
-                      width:60px;border-radius:2px;"></div>
+        f"""
+        <div class="ok-navbar">
+          <div class="ok-brand">
+            {_LOGO_IMG}
+            <div class="ok-brand-text">
+              <span class="ok-title">Project Okavango</span>
+              <span class="ok-subtitle">Environmental Intelligence &amp; AI Risk Detection</span>
+            </div>
+          </div>
+          <nav class="ok-nav">
+            <a href="?page=world_map" target="_self" class="ok-navlink {world_active}">
+              <span class="ok-nav-icon">🗺</span>&nbsp;World Map
+            </a>
+            <a href="?page=ai_workflow" target="_self" class="ok-navlink {ai_active}">
+              <span class="ok-nav-icon">🛰</span>&nbsp;AI Workflow
+            </a>
+          </nav>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
 
-def _render_nav(page: str) -> None:
-    """Render top navigation buttons and a divider."""
-    c1, c2, _ = st.columns([1, 1, 5])
-    with c1:
-        st.markdown('<div class="nav-btn">', unsafe_allow_html=True)
-        if st.button(
-            PAGE_MAP,
-            use_container_width=True,
-            type="primary" if page == PAGE_MAP else "secondary",
-        ):
-            st.session_state[PAGE_KEY] = PAGE_MAP
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
-    with c2:
-        st.markdown('<div class="nav-btn">', unsafe_allow_html=True)
-        if st.button(
-            PAGE_AI,
-            use_container_width=True,
-            type="primary" if page == PAGE_AI else "secondary",
-        ):
-            st.session_state[PAGE_KEY] = PAGE_AI
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
-    st.divider()
-
-
 def main() -> None:
     """Run the Streamlit dashboard."""
     st.set_page_config(
         page_title="Project Okavango",
-        page_icon="O",
+        page_icon="🌿",
         layout="wide",
     )
     _inject_css()
-    if PAGE_KEY not in st.session_state:
-        st.session_state[PAGE_KEY] = PAGE_MAP
-    _render_header()
-    _render_nav(st.session_state[PAGE_KEY])
-    if st.session_state[PAGE_KEY] == PAGE_AI:
+    # Derive active page from URL query params (set by navbar anchor links)
+    page_param = st.query_params.get("page", "world_map")
+    active_page = PAGE_AI if page_param == "ai_workflow" else PAGE_MAP
+    _render_navbar(active_page)
+    if active_page == PAGE_AI:
         render_page2()
     else:
         render_page1()
