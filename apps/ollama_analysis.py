@@ -178,17 +178,43 @@ def assess_environmental_risk(
 
 
 def extract_risk_verdict(assessment: str) -> str:
-    """Parse the OVERALL VERDICT line from the risk assessment text.
+    """Parse the verdict from the risk assessment text.
+
+    Handles cases where the verdict keyword and the verdict value appear on
+    the same line or on consecutive lines.
 
     Returns one of: ``'AT RISK'``, ``'NOT AT RISK'``, or ``'UNCERTAIN'``.
     """
-    for line in assessment.splitlines():
+    _VERDICT_TRIGGERS = (
+        "OVERALL VERDICT", "OVERALL:", "FINAL VERDICT",
+        "VERDICT:", "CONCLUSION:", "ASSESSMENT:",
+    )
+
+    def _classify(text: str) -> str | None:
+        if "NOT AT RISK" in text:
+            return "NOT AT RISK"
+        if "AT RISK" in text:
+            return "AT RISK"
+        if "UNCERTAIN" in text:
+            return "UNCERTAIN"
+        return None
+
+    lines = assessment.splitlines()
+    for i, line in enumerate(lines):
         upper = line.upper()
-        if "OVERALL VERDICT" in upper or "OVERALL:" in upper:
-            if "NOT AT RISK" in upper:
-                return "NOT AT RISK"
-            if "AT RISK" in upper:
-                return "AT RISK"
-            if "UNCERTAIN" in upper:
-                return "UNCERTAIN"
-    return "UNCERTAIN"
+        if any(trigger in upper for trigger in _VERDICT_TRIGGERS):
+            # Try same line first
+            result = _classify(upper)
+            if result:
+                return result
+            # Try the next non-empty line
+            for next_line in lines[i + 1:]:
+                if next_line.strip():
+                    result = _classify(next_line.upper())
+                    if result:
+                        return result
+                    break
+
+    # Last resort: scan the entire text for verdict keywords
+    upper_full = assessment.upper()
+    return _classify(upper_full) or "UNCERTAIN"
