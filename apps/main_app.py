@@ -834,7 +834,12 @@ def render_page3() -> None:
     # Newest first
     df = df.iloc[::-1].reset_index(drop=True)
 
-    st.caption(f"{len(df)} result{'s' if len(df) != 1 else ''} in database")
+    _count_col, _btn_col = st.columns([6, 1])
+    _count_col.caption(f"{len(df)} result{'s' if len(df) != 1 else ''} in database")
+    with _btn_col:
+        if st.button("Clear history", type="secondary", use_container_width=True):
+            DB_PATH.write_text("")
+            st.rerun()
 
     _BORDER_COLOUR = {"AT RISK": "#e05a5a", "NOT AT RISK": "#3ecb8a", "UNCERTAIN": "#f5c842"}
 
@@ -1116,7 +1121,22 @@ def render_page1() -> None:
         ),
     }
 
-    dataset_name = st.selectbox("Select dataset:", list(dataset_to_metric.keys()))
+    _datasets_list = list(dataset_to_metric.keys())
+    try:
+        _ds_idx = int(st.query_params.get("ds", "0"))
+        if _ds_idx < 0 or _ds_idx >= len(_datasets_list):
+            _ds_idx = 0
+    except (ValueError, TypeError):
+        _ds_idx = 0
+    _current_page = st.query_params.get("page", "world_map")
+    _btns_html = "".join(
+        f'<a href="?page={_current_page}&ds={i}" target="_self" '
+        f'class="ok-dataset-btn {"ok-ds-active" if i == _ds_idx else "ok-ds-inactive"}">'
+        f'{name}</a>'
+        for i, name in enumerate(_datasets_list)
+    )
+    st.markdown(f'<div class="ok-dataset-row">{_btns_html}</div>', unsafe_allow_html=True)
+    dataset_name = _datasets_list[_ds_idx]
     metric_col = dataset_to_metric[dataset_name]
 
     st.markdown(
@@ -1324,12 +1344,46 @@ def _inject_css() -> None:
         { color:#7fbfb0 !important; border:1px solid #1e4d42 !important;
           border-radius:6px !important; }
 
+        /* ── Dataset selector buttons ────────────────────────────── */
+        .ok-dataset-row {
+            display:flex; flex-wrap:wrap; gap:0.5rem;
+            margin:0.5rem 0 1.2rem 0;
+        }
+        .ok-dataset-btn {
+            padding:0.45rem 1rem; border-radius:8px;
+            font-size:0.85rem !important; font-weight:600 !important;
+            text-decoration:none !important; cursor:pointer;
+            transition:opacity 0.15s; white-space:nowrap;
+            letter-spacing:0.2px; display:inline-block;
+        }
+        .ok-ds-active {
+            background:#3ecb8a !important; color:#071917 !important;
+            border:1.5px solid #3ecb8a !important;
+        }
+        .ok-ds-inactive {
+            background:#071917 !important; color:#3ecb8a !important;
+            border:1.5px solid #3ecb8a !important;
+        }
+        .ok-ds-inactive:hover { opacity:0.75; }
+
         /* ── Form controls ───────────────────────────────────────── */
         .stSelectbox>div>div,.stNumberInput>div>div>input
         { background-color:#0a2420 !important; color:#ffffff !important;
           border:1px solid #1e4d42 !important; border-radius:8px !important; }
-        .stMultiSelect>div
-        { background-color:#0a2420 !important; border:1px solid #1e4d42 !important; }
+
+        /* Multiselect container and tags */
+        .stMultiSelect>div,
+        .stMultiSelect [data-baseweb="select"],
+        .stMultiSelect [data-baseweb="select"]>div
+        { background-color:#0a2420 !important; border:1px solid #1e4d42 !important;
+          border-radius:8px !important; }
+        .stMultiSelect [data-baseweb="tag"]
+        { background-color:#1e4d42 !important; border-radius:4px !important; }
+        .stMultiSelect [data-baseweb="tag"] span,
+        .stMultiSelect [data-baseweb="tag"] [role="presentation"]
+        { color:#3ecb8a !important; }
+        .stMultiSelect input
+        { background-color:transparent !important; color:#ffffff !important; }
 
         /* ── KPI cards ───────────────────────────────────────────── */
         div[data-testid="metric-container"]
