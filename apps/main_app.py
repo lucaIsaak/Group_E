@@ -45,7 +45,7 @@ from ollama_analysis import (  # pylint: disable=wrong-import-position,import-er
     _PROMPT,
     _RISK_PROMPT_TEMPLATE,
 )
-from db import log_run, find_existing_run, DB_PATH  # pylint: disable=wrong-import-position,import-error,wrong-import-order
+from db import log_run, find_existing_run, SEED_PATH, SESSION_PATH  # pylint: disable=wrong-import-position,import-error,wrong-import-order
 import folium  # pylint: disable=wrong-import-position,import-error,wrong-import-order
 from streamlit_folium import st_folium  # pylint: disable=wrong-import-position,import-error,wrong-import-order
 
@@ -821,24 +821,27 @@ def render_page3() -> None:
         unsafe_allow_html=True,
     )
 
-    if not DB_PATH.exists() or DB_PATH.stat().st_size == 0:
+    seed_df = pd.read_csv(SEED_PATH) if SEED_PATH.exists() else pd.DataFrame()
+    session_df = (
+        pd.read_csv(SESSION_PATH)
+        if SESSION_PATH.exists() and SESSION_PATH.stat().st_size > 0
+        else pd.DataFrame()
+    )
+
+    if seed_df.empty and session_df.empty:
         st.info("No analyses yet. Run the AI Workflow on a location to see results here.")
         return
 
-    df = pd.read_csv(DB_PATH)
-    if df.empty:
-        st.info("No analyses yet.")
-        return
-
-    # Newest first
-    df = df.iloc[::-1].reset_index(drop=True)
+    # Session entries newest-first on top, then seed entries
+    session_df = session_df.iloc[::-1].reset_index(drop=True)
+    df = pd.concat([session_df, seed_df], ignore_index=True)
 
     _count_col, _btn_col = st.columns([6, 1])
     _count_col.caption(f"{len(df)} result{'s' if len(df) != 1 else ''} in database")
     with _btn_col:
         if st.button("Clear history", type="secondary", use_container_width=True):
-            import shutil
-            shutil.copy(ROOT_PATH / "database" / "seed.csv", DB_PATH)
+            if SESSION_PATH.exists():
+                SESSION_PATH.unlink()
             st.rerun()
 
     _BORDER_COLOUR = {"AT RISK": "#e05a5a", "NOT AT RISK": "#3ecb8a", "UNCERTAIN": "#f5c842"}

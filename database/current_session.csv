@@ -1,0 +1,39 @@
+timestamp,latitude,longitude,zoom,image_size_px,image_path,image_model,image_prompt,image_description,text_model,text_prompt,text_description,danger
+2026-03-13T18:53:29+00:00,2.6138,31.5014,12,512,/Users/lucaisaak/Documents/Privat/Master/Nova/3rd Term/Advanced Programming for Data Science/Group Project/Group_E/images/sat_2.6138_31.5014_z12_512px.png,llava,"You are analysing a satellite image. Describe in detail what you see: terrain type, vegetation, water bodies, urban structures, and any other notable features. Be specific and concise.
+"," The image is a satellite view of a landscape. The terrain is a mix of water bodies and land, with the water appearing in shades of blue and green. There are several bodies of water, including a large body of water that could be a lake or river, and smaller bodies that might be ponds or lakes. The land is covered with patches of green vegetation, indicating the presence of trees or grass. There are also areas of brown, which could be bare land or areas with less vegetation.
+
+Urban structures are visible, with a clear boundary between the urbanized areas and the surrounding natural landscape. The urban areas are characterized by a grid-like pattern of roads and buildings, with the buildings appearing as white shapes against the green and brown background.
+
+There are no notable features that stand out, such as distinct landmarks or unusual patterns. The image provides a comprehensive view of the landscape, showcasing the interaction between natural and urban environments. ",llama3.2,"You are an environmental risk assessment expert reviewing a satellite image description.
+
+Satellite image description:
+ The image is a satellite view of a landscape. The terrain is a mix of water bodies and land, with the water appearing in shades of blue and green. There are several bodies of water, including a large body of water that could be a lake or river, and smaller bodies that might be ponds or lakes. The land is covered with patches of green vegetation, indicating the presence of trees or grass. There are also areas of brown, which could be bare land or areas with less vegetation.
+
+Urban structures are visible, with a clear boundary between the urbanized areas and the surrounding natural landscape. The urban areas are characterized by a grid-like pattern of roads and buildings, with the buildings appearing as white shapes against the green and brown background.
+
+There are no notable features that stand out, such as distinct landmarks or unusual patterns. The image provides a comprehensive view of the landscape, showcasing the interaction between natural and urban environments. 
+
+Task: Identify the most relevant environmental risk questions for this specific area,
+then answer each one based solely on the description above.
+Finally, give an overall verdict.
+
+Format your response EXACTLY like this (include all headers):
+Q1: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q2: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+Q3: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
+(add up to 2 more questions if clearly relevant)
+
+OVERALL VERDICT: [AT RISK / NOT AT RISK / UNCERTAIN]
+SUMMARY: [one or two sentences explaining the overall verdict]
+","Q1: Are there any signs of pollution or contamination in the water bodies? → NO: There is no information provided about pollution or contamination in the water bodies.
+
+Q2: Are there any areas of high vegetation that could be indicative of invasive species? → NO: The description does not mention any areas of high vegetation that could be indicative of invasive species.
+
+Q3: Are there any signs of erosion or sedimentation in the water bodies or surrounding land? → UNCERTAIN: There is no information provided about erosion or sedimentation, and the description does not suggest any obvious signs of these issues.
+
+Q4: Are there any urban structures that could be indicative of a high population density or urban heat island effect? → YES: The description mentions urban structures with a grid-like pattern of roads and buildings, which could be indicative of a high population density.
+
+Q5: Are there any areas of bare land or reduced vegetation that could be indicative of soil degradation or nutrient depletion? → YES: The description mentions areas of brown, which could be bare land or areas with less vegetation, suggesting soil degradation or nutrient depletion.
+
+OVERALL VERDICT: AT RISK
+SUMMARY: The area appears to be at risk due to potential signs of pollution, invasive species, erosion, and soil degradation, although more information would be needed to confirm these concerns.",AT RISK
