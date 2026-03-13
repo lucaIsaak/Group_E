@@ -838,7 +838,8 @@ def render_page3() -> None:
     _count_col.caption(f"{len(df)} result{'s' if len(df) != 1 else ''} in database")
     with _btn_col:
         if st.button("Clear history", type="secondary", use_container_width=True):
-            DB_PATH.write_text("")
+            import shutil
+            shutil.copy(ROOT_PATH / "database" / "seed.csv", DB_PATH)
             st.rerun()
 
     _BORDER_COLOUR = {"AT RISK": "#e05a5a", "NOT AT RISK": "#3ecb8a", "UNCERTAIN": "#f5c842"}
@@ -890,8 +891,9 @@ def render_page3() -> None:
             img_col, detail_col = st.columns([1, 2])
 
             with img_col:
-                if img_path and Path(img_path).exists():
-                    st.image(img_path, use_container_width=True)
+                resolved = Path(img_path) if Path(img_path).is_absolute() else ROOT_PATH / img_path
+                if img_path and resolved.exists():
+                    st.image(str(resolved), use_container_width=True)
                 else:
                     st.caption("Image file not found on disk.")
 

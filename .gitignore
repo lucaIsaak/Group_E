@@ -208,6 +208,10 @@ __marimo__/
 
 # Project: satellite image cache (large binaries, regeneratable from coordinates)
 images/
+# README demo images — always keep these tracked
+!images/sat_-2.4602_23.3034_z16_1024px.png
+!images/sat_57.0000_-111.5000_z10_1024px.png
+!images/sat_44.5000_59.5000_z8_1024px.png
 
 # Project: downloaded datasets
 downloads/
