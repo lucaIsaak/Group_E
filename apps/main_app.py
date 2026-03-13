@@ -60,7 +60,6 @@ COUNTRY_STATE_KEY = "selected_iso3"
 
 BTN_SELECT_ALL_KEY = "btn_select_all_regions"
 BTN_CLEAR_REGIONS_KEY = "btn_clear_regions"
-BTN_CLEAR_COUNTRY_KEY = "btn_clear_country"
 
 DEFAULT_MAP_HEIGHT = 560
 DEFAULT_BAR_HEIGHT = 320
@@ -1197,7 +1196,8 @@ def render_page1() -> None:
         st.error("No KPI data available for current filters.")
         st.stop()
 
-    _render_kpis_above_map(gdf_year, country_col, metric_col, set_kpis)
+    render_set_kpis(set_kpis)
+    country_stats_slot = st.empty()
 
     st.subheader("World Map (click a country)")
     map_fig = build_map(gdf_year, country_col, metric_col, dataset_name)
@@ -1210,8 +1210,16 @@ def render_page1() -> None:
 
     _update_country_selection(selection_event)
 
-    if st.button("Clear country", key=BTN_CLEAR_COUNTRY_KEY):
-        st.session_state[COUNTRY_STATE_KEY] = None
+    selected_iso3 = st.session_state.get(COUNTRY_STATE_KEY)
+    if selected_iso3:
+        with country_stats_slot.container():
+            country_kpis = compute_country_kpis(
+                gdf_year, country_col, metric_col, selected_iso3
+            )
+            if country_kpis is None:
+                st.warning("Selected country has no data under current filters.")
+            else:
+                render_selected_country(country_kpis)
 
     render_top_bottom_charts(gdf_year, country_col, metric_col)
 
