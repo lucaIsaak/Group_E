@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Dict, Optional
 
 DB_PATH = Path(__file__).resolve().parent.parent / "database" / "images.csv"
+SEED_PATH = Path(__file__).resolve().parent.parent / "database" / "seed.csv"
+SESSION_PATH = Path(__file__).resolve().parent.parent / "database" / "current_session.csv"
 
 _COLUMNS = [
     "timestamp",
@@ -54,23 +56,23 @@ def find_existing_run(
     Returns:
         The matching row as a dict, or ``None`` if no valid cache entry exists.
     """
-    if not DB_PATH.exists():
-        return None
-
     match = None
-    with open(DB_PATH, newline="", encoding="utf-8") as fh:
-        for row in csv.DictReader(fh):
-            try:
-                if (
-                    float(row["latitude"]) == latitude
-                    and float(row["longitude"]) == longitude
-                    and int(row["zoom"]) == zoom
-                    and int(row["image_size_px"]) == image_size_px
-                    and Path(row["image_path"]).exists()
-                ):
-                    match = row  # keep iterating — last match wins (most recent)
-            except (KeyError, ValueError):
-                continue
+    for path in (SESSION_PATH, SEED_PATH):
+        if not path.exists():
+            continue
+        with open(path, newline="", encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                try:
+                    if (
+                        float(row["latitude"]) == latitude
+                        and float(row["longitude"]) == longitude
+                        and int(row["zoom"]) == zoom
+                        and int(row["image_size_px"]) == image_size_px
+                        and Path(row["image_path"]).exists()
+                    ):
+                        match = row
+                except (KeyError, ValueError):
+                    continue
 
     return match
 
@@ -108,9 +110,9 @@ def log_run(  # pylint: disable=too-many-arguments,too-many-locals
         text_description:  Full risk assessment text produced by the text model.
         danger:            Parsed verdict: ``'AT RISK'``, ``'NOT AT RISK'``, or ``'UNCERTAIN'``.
     """
-    DB_PATH.parent.mkdir(exist_ok=True)
+    SESSION_PATH.parent.mkdir(exist_ok=True)
 
-    write_header = not DB_PATH.exists() or DB_PATH.stat().st_size == 0
+    write_header = not SESSION_PATH.exists() or SESSION_PATH.stat().st_size == 0
 
     row = {
         "timestamp": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -128,7 +130,7 @@ def log_run(  # pylint: disable=too-many-arguments,too-many-locals
         "danger": danger,
     }
 
-    with open(DB_PATH, "a", newline="", encoding="utf-8") as fh:
+    with open(SESSION_PATH, "a", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=_COLUMNS)
         if write_header:
             writer.writeheader()

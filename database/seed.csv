@@ -31,31 +31,3 @@ Q4: Is there a risk of water scarcity or drought? → YES: The presence of water
 
 OVERALL VERDICT: AT RISK
 SUMMARY: The presence of water bodies in the desert landscape indicates a risk of water pollution and water scarcity, highlighting the need for careful management and conservation of this valuable resource.",AT RISK
-2026-03-13T16:51:02+00:00,21.7799,33.3105,12,512,/Users/lucaisaak/Documents/Privat/Master/Nova/3rd Term/Advanced Programming for Data Science/Group Project/Group_E/images/sat_21.7799_33.3105_z12_512px.png,llava,"You are analysing a satellite image. Describe in detail what you see: terrain type, vegetation, water bodies, urban structures, and any other notable features. Be specific and concise.
-"," The image is a satellite view of a desert landscape. The terrain is predominantly flat with a few small, sparse vegetation patches scattered across the surface. The vegetation appears to be sparse and sporadic, indicative of a desert environment. There are no visible water bodies or urban structures. The landscape is characterized by a sandy, arid appearance with a few rocky outcrops. The color palette is dominated by shades of brown and beige, typical of desert environments. There are no notable features or landmarks that stand out in this image. ",llama3.2,"You are an environmental risk assessment expert reviewing a satellite image description.
-
-Satellite image description:
- The image is a satellite view of a desert landscape. The terrain is predominantly flat with a few small, sparse vegetation patches scattered across the surface. The vegetation appears to be sparse and sporadic, indicative of a desert environment. There are no visible water bodies or urban structures. The landscape is characterized by a sandy, arid appearance with a few rocky outcrops. The color palette is dominated by shades of brown and beige, typical of desert environments. There are no notable features or landmarks that stand out in this image. 
-
-Task: Identify the most relevant environmental risk questions for this specific area,
-then answer each one based solely on the description above.
-Finally, give an overall verdict.
-
-Format your response EXACTLY like this (include all headers):
-Q1: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
-Q2: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
-Q3: [question] → [YES / NO / UNCERTAIN]: [brief explanation]
-(add up to 2 more questions if clearly relevant)
-
-OVERALL VERDICT: [AT RISK / NOT AT RISK / UNCERTAIN]
-SUMMARY: [one or two sentences explaining the overall verdict]
-","Q1: Is there a potential risk of wildfires in the area? → YES: The sparse and sporadic vegetation patches, combined with the arid and sandy terrain, increase the risk of wildfires in the area.
-
-Q2: Are there any visible signs of pollution or contamination in the area? → NO: There are no visible signs of pollution or contamination in the image, suggesting that the area may be relatively pristine.
-
-Q3: Is there a potential risk of soil erosion due to heavy rainfall or flooding? → NO: The flat terrain and lack of visible water bodies suggest that the area is not prone to heavy rainfall or flooding, reducing the risk of soil erosion.
-
-Q4: Are there any potential risks associated with the presence of rocky outcrops? → UNCERTAIN: While the presence of rocky outcrops may pose some risks, such as rockfall or landslides, the description does not provide sufficient information to determine the likelihood or severity of these risks.
-
-OVERALL VERDICT: NOT AT RISK
-SUMMARY: The area appears to be a relatively pristine desert landscape with no visible signs of pollution, contamination, or significant environmental risks. However, the presence of rocky outcrops and sparse vegetation patches may pose some, albeit uncertain, risks that require further investigation.",NOT AT RISK
